@@ -18,6 +18,7 @@ services:
       OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:-m3-web-client}
       OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-m3-web-secret}
       INTEGRATION_MODE: ${INTEGRATION_MODE:-local}
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       postgres:
         condition: service_healthy

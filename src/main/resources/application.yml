@@ -78,3 +78,24 @@ springdoc:
     operations-sorter: alpha
   api-docs:
     path: /v3/api-docs
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/m3_db}
+    username: ${SPRING_DATASOURCE_USERNAME:m3_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:m3_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true

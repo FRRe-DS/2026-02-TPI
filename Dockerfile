@@ -6,6 +6,10 @@ WORKDIR /build
 
 COPY pom.xml mvnw mvnw.cmd ./
 COPY .mvn/ .mvn/
+
+# Normaliza finales de línea de Windows (CRLF a LF) y otorga permisos de ejecución
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+
 RUN ./mvnw dependency:go-offline -B || true
 
 COPY src/ src/
@@ -25,7 +29,7 @@ USER appuser
 
 EXPOSE 3003
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3003/health/live || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
