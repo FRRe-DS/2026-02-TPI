@@ -1,0 +1,42 @@
+version: 0.2.0
+description: Catálogo de eventos de dominio emitidos por M3 (Conductores y Vehículos)
+events:
+  - name: m3.qualification.changed.v1
+    description: Emitido cuando cambia el estado de habilitación de un conductor o vehículo (aprobado, observado, suspendido, rechazado).
+    producer: M3
+    consumers:
+      - M4 (Ubicación y Disponibilidad)
+      - M5 (Despacho)
+    payloadSchema:
+      type: object
+      properties:
+        driverId:
+          type: string
+          format: uuid
+        previousStatus:
+          type: string
+        newStatus:
+          type: string
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+
+  - name: m3.document.expired.v1
+    description: Emitido cuando vence un documento crítico (licencia o seguro).
+    producer: M3
+    consumers:
+      - M4
+      - M5
+    payloadSchema:
+      type: object
+      properties:
+        driverId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+        expiredAt:
+          type: string
+          format: date-time

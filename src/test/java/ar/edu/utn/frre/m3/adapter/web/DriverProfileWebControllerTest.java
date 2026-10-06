@@ -1,0 +1,88 @@
+package ar.edu.utn.frre.m3.adapter.web;
+
+import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
+import ar.edu.utn.frre.m3.application.port.in.GetDriverProfileUseCase;
+import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
+import ar.edu.utn.frre.m3.domain.Driver;
+import ar.edu.utn.frre.m3.domain.PersonalInfo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(controllers = DriverProfileWebController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@DisplayName("Pruebas MockMvc de Adaptador Web: DriverProfileWebController (HU-02)")
+class DriverProfileWebControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private GetMyDriverProfileUseCase getMyDriverProfileUseCase;
+
+    @MockBean
+    private GetDriverProfileUseCase getDriverProfileUseCase;
+
+    private Driver sampleDriver;
+    private final UUID driverId = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        PersonalInfo info = new PersonalInfo(
+                "Lautaro",
+                "González",
+                "42158963",
+                LocalDate.of(1999, 8, 20),
+                "Av. Castelli 950",
+                "+54 362 4558899",
+                "lautaro.gonzalez@example.com"
+        );
+        sampleDriver = new Driver(driverId, "user-sub-123", info, Instant.now());
+    }
+
+    @Test
+    @DisplayName("GET /ui debe redirigir a /ui/profile")
+    void shouldRedirectFromUiToProfile() throws Exception {
+        mockMvc.perform(get("/ui"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/ui/profile"));
+    }
+
+    @Test
+    @DisplayName("GET /ui/profile debe retornar vista profile con atributos de modelo 200 OK")
+    void shouldRenderProfileViewSuccessfully() throws Exception {
+        when(getMyDriverProfileUseCase.getMyDriverProfile()).thenReturn(sampleDriver);
+
+        mockMvc.perform(get("/ui/profile"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("profile"))
+                .andExpect(model().attributeExists("driver"))
+                .andExpect(model().attribute("driver", org.hamcrest.Matchers.hasProperty("fullName", org.hamcrest.Matchers.is("Lautaro González"))))
+                .andExpect(model().attribute("driver", org.hamcrest.Matchers.hasProperty("dni", org.hamcrest.Matchers.is("42158963"))));
+    }
+
+    @Test
+    @DisplayName("GET /ui/profile con conductor no encontrado debe retornar vista de error amigable")
+    void shouldRenderErrorViewWhenDriverNotFound() throws Exception {
+        when(getMyDriverProfileUseCase.getMyDriverProfile())
+                .thenThrow(new DriverNotFoundException("No se encontró ningún perfil de conductor registrado."));
+
+        mockMvc.perform(get("/ui/profile"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("error"))
+                .andExpect(model().attributeExists("errorMessage"));
+    }
+}

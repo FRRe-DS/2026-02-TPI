@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info:
+  title: M6 — Contexto de Viajes para Valoración (Propuesta de Interfaz)
+  version: 0.1.0
+paths:
+  /api/v1/trips/{tripId}/rating-context:
+    get:
+      summary: Consultar contexto de viaje completado para valoración de cliente
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: driverId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contexto del viaje verificado
