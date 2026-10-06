@@ -51,7 +51,7 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            issuer-uri: ${OIDC_ISSUER:}
+            issuer-uri: ${OIDC_ISSUER:http://localhost:8080/realms/clonuber}
 
 # Parámetros para desarrollo y pruebas locales
 app:
