@@ -13,7 +13,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/m3_db
       SPRING_DATASOURCE_USERNAME: m3_user
       SPRING_DATASOURCE_PASSWORD: m3_password
-      OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:8080/realms/clonuber}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-m3-service}
       OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:-m3-web-client}
       OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-m3-web-secret}

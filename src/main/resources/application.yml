@@ -35,12 +35,6 @@ spring:
     encoding: UTF-8
 
   security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${OIDC_ISSUER:}
-          jwk-set-uri: ${OIDC_JWKS_URI:}
-          audiences: ${OIDC_AUDIENCE:m3-service}
       client:
         registration:
           keycloak:
@@ -51,7 +45,11 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            issuer-uri: ${OIDC_ISSUER:http://localhost:8080/realms/clonuber}
+            authorization-uri: ${OIDC_AUTH_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/auth}
+            token-uri: ${OIDC_TOKEN_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/token}
+            jwk-set-uri: ${OIDC_JWKS_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/certs}
+            user-info-uri: ${OIDC_USERINFO_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/userinfo}
+            user-name-attribute: preferred_username
 
 # Parámetros para desarrollo y pruebas locales
 app:
