@@ -4,7 +4,6 @@ target/
 .dockerignore
 *.md
 docs/
-contracts/
 .github/
 .vscode/
 .idea/
