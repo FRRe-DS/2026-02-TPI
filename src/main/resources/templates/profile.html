@@ -69,19 +69,19 @@
                 </small>
             </div>
             <div class="btn-group btn-group-sm" role="group">
-                <a th:href="@{/ui/profile(driverId='a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')}"
+                <a th:href="@{/ui/profile(driverId='a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', switchSession='true')}"
                    class="btn btn-outline-success"
                    th:classappend="${driver.id == 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'} ? 'active fw-bold shadow-sm' : ''"
                    title="Conductor Habilitado">1. Habilitado (APPROVED)</a>
-                <a th:href="@{/ui/profile(driverId='b1ffcd88-8b1a-4fe7-aa5c-5aa8ac270b22')}"
+                <a th:href="@{/ui/profile(driverId='b1ffcd88-8b1a-4fe7-aa5c-5aa8ac270b22', switchSession='true')}"
                    class="btn btn-outline-warning"
                    th:classappend="${driver.id == 'b1ffcd88-8b1a-4fe7-aa5c-5aa8ac270b22'} ? 'active fw-bold shadow-sm' : ''"
                    title="Conductor Pendiente">2. Pendiente (PENDING)</a>
-                <a th:href="@{/ui/profile(driverId='c2eebe77-7a2b-4cd6-994b-4bb7bd160c33')}"
+                <a th:href="@{/ui/profile(driverId='c2eebe77-7a2b-4cd6-994b-4bb7bd160c33', switchSession='true')}"
                    class="btn btn-outline-info"
                    th:classappend="${driver.id == 'c2eebe77-7a2b-4cd6-994b-4bb7bd160c33'} ? 'active fw-bold shadow-sm' : ''"
                    title="Conductor Observado">3. Observado (OBSERVED)</a>
-                <a th:href="@{/ui/profile(driverId='d3ffbf66-6f3c-4bc5-883a-3aa6ac050d44')}"
+                <a th:href="@{/ui/profile(driverId='d3ffbf66-6f3c-4bc5-883a-3aa6ac050d44', switchSession='true')}"
                    class="btn btn-outline-danger"
                    th:classappend="${driver.id == 'd3ffbf66-6f3c-4bc5-883a-3aa6ac050d44'} ? 'active fw-bold shadow-sm' : ''"
                    title="Conductor Suspendido">4. Suspendido (SUSPENDED)</a>

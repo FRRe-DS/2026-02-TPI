@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -41,11 +42,17 @@ public class DriverProfileWebController {
     }
 
     @GetMapping("/profile")
-    public String viewProfile(@RequestParam(name = "driverId", required = false) String driverIdParam, Model model) {
+    public String viewProfile(@RequestParam(name = "driverId", required = false) String driverIdParam,
+                              @RequestParam(name = "switchSession", defaultValue = "false") boolean switchSession,
+                              HttpServletRequest request,
+                              Model model) {
         try {
             Driver driver;
             if (driverIdParam != null && !driverIdParam.isBlank()) {
                 driver = getDriverProfileUseCase.getDriverProfileById(UUID.fromString(driverIdParam));
+                if (switchSession && driver != null && request != null) {
+                    request.getSession().setAttribute("SIMULATED_SUBJECT", driver.getIdentitySubject());
+                }
             } else {
                 driver = getMyDriverProfileUseCase.getMyDriverProfile();
             }
@@ -68,7 +75,7 @@ public class DriverProfileWebController {
     }
 
     @GetMapping("/profile/{driverId}")
-    public String viewProfileByPath(@PathVariable UUID driverId, Model model) {
-        return viewProfile(driverId.toString(), model);
+    public String viewProfileByPath(@PathVariable UUID driverId, HttpServletRequest request, Model model) {
+        return viewProfile(driverId.toString(), false, request, model);
     }
 }

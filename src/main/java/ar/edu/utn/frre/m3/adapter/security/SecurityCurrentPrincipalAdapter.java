@@ -26,15 +26,26 @@ public class SecurityCurrentPrincipalAdapter implements CurrentPrincipalPort {
     @Value("${app.security.mock-subject:}")
     private String mockSubject;
 
+    @Value("${app.security.mock-roles:ROLE_DRIVER,ROLE_OPERATOR}")
+    private String mockRoles;
+
     @Override
     public Optional<String> getSubject() {
-        // 1. Soporte para desarrollo / testing si se envía header explícito
+        // 1. Soporte para desarrollo / testing si se envía header explícito o atributo de sesión
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attrs != null) {
             HttpServletRequest request = attrs.getRequest();
             String devSubject = request.getHeader("X-Dev-Subject");
             if (devSubject != null && !devSubject.isBlank()) {
                 return Optional.of(devSubject.trim());
+            }
+
+            jakarta.servlet.http.HttpSession session = request.getSession(false);
+            if (session != null) {
+                Object simSubject = session.getAttribute("SIMULATED_SUBJECT");
+                if (simSubject != null && !simSubject.toString().isBlank()) {
+                    return Optional.of(simSubject.toString().trim());
+                }
             }
         }
 
@@ -75,7 +86,17 @@ public class SecurityCurrentPrincipalAdapter implements CurrentPrincipalPort {
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            if (mockRoles != null && !mockRoles.isBlank()) {
+                String targetRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                String simpleRole = role.startsWith("ROLE_") ? role.substring(5) : role;
+                for (String r : mockRoles.split(",")) {
+                    String trimmed = r.trim();
+                    if (trimmed.equalsIgnoreCase(targetRole) || trimmed.equalsIgnoreCase(simpleRole) || trimmed.equalsIgnoreCase(role)) {
+                        return true;
+                    }
+                }
+            }
             return false;
         }
 
