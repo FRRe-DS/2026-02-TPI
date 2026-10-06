@@ -131,18 +131,18 @@ Al iniciar el sistema en Docker, se precargan automáticamente 4 conductores con
    - **UUID**: `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11`
    - **Estado**: `APPROVED`
    - **Situación**: Listo para tomar viajes. Es el usuario por defecto que se muestra en la web.
-2. **María Fernández (En Revisión)**:
-   - **UUID**: `b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22`
+2. **Carlos Benítez (En Revisión)**:
+   - **UUID**: `b1ffcd88-8b1a-4fe7-aa5c-5aa8ac270b22`
    - **Estado**: `PENDING`
    - **Situación**: Documentación en proceso de verificación.
-3. **Carlos Benítez (Con Observaciones)**:
-   - **UUID**: `c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33`
+3. **Mariana López (Con Observaciones)**:
+   - **UUID**: `c2eebe77-7a2b-4cd6-994b-4bb7bd160c33`
    - **Estado**: `OBSERVED`
-   - **Situación**: Registro de conducir próximo a vencer. Requiere actualizar documentación.
-4. **Ana Martínez (Suspendida)**:
-   - **UUID**: `d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a44`
+   - **Situación**: "La fotografía de la licencia de conducir no es legible. Por favor presentar una imagen nítida."
+4. **Esteban Duarte (Suspendido)**:
+   - **UUID**: `d3ffbf66-6f3c-4bc5-883a-3aa6ac050d44`
    - **Estado**: `SUSPENDED`
-   - **Situación**: Sancionada temporalmente por reclamos reiterados de usuarios.
+   - **Situación**: "Suspensión preventiva por acumulación de reclamos de seguridad."
 
 ---
 
