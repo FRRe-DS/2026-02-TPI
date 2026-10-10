@@ -1,0 +1,1355 @@
+# M3 — Conductores y Vehículos. Propuesta académica 0.2.0.
+# Adaptación de arquitectura a Java/Spring Boot y web Thymeleaf en E1.
+# API sin cambios respecto de 0.1.1: mismas rutas, operaciones, permisos y schemas.
+# Leer junto con M3_Arquitectura_TPI_Java_Web.md.
+# La web /ui/** usa sesión OIDC + CSRF; sus páginas no son parte de este contrato JSON.
+# La API sigue usando Bearer JWT, no cookies. Acuerdos M1/M4/M5/M6 pendientes.
+openapi: 3.0.3
+info:
+  title: M3 — Conductores y Vehículos
+  version: 0.2.0
+  description: >-
+    PROPUESTA para revisión, no contrato aprobado ni implementación desplegada. Base: RF-3.1 a RF-3.7 del TPI 2026.
+    Arquitectura Java/Spring Boot y PostgreSQL; web Thymeleaf prevista desde E1. El cambio de stack no modifica las
+    operaciones JSON del contrato 0.1.1. Las páginas HTML /ui/** y el login OIDC se documentan en el Markdown asociado,
+    no en paths. La sesión web no autentica estas operaciones: la API mantiene Bearer JWT.
+    Las extensiones x-allowed-human-roles y x-required-service-scopes documentan el acceso; Spring Security y los casos
+    de uso deben aplicar permisos y propiedad. Roles y scopes se acuerdan con M1. Ningún token técnico representa a
+    un conductor humano. Las operaciones E2 permanecen en el diseño; la release E1 publicará sólo las implementadas.
+    API versionada /api/v1. Las respuestas de habilitación no constituyen reserva ni asignación.
+servers:
+  - url: 'http://localhost:3003'
+    description: Ejemplo local; reemplazar en el entorno integrador. HTTPS al publicar.
+tags:
+  - name: Drivers
+  - name: Vehicles
+  - name: Documents
+  - name: Qualifications
+  - name: Availability
+  - name: Integration
+  - name: Ratings
+  - name: Health
+security:
+  - bearerAuth: []
+
+# OPERACIONES DE M3
+paths:
+
+  /api/v1/drivers:
+    post:
+      operationId: createOwnDriver
+      summary: Crear perfil propio
+      description: Sólo usuario humano. El sub verificado identifica el perfil. El mismo sub no puede registrar dos 
+        conductores.
+      tags: [Drivers]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateDriver'}
+      responses:
+        '201':
+          description: Creado.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+            Location: {$ref: '#/components/headers/Location'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Driver'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    get:
+      operationId: listDrivers
+      summary: Consultar conductores como operador
+      tags: [Drivers]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DriverPage'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/me/driver:
+    get:
+      operationId: getOwnDriver
+      summary: Consultar mi perfil
+      tags: [Drivers]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      responses:
+        '200': {$ref: '#/components/responses/DriverOk'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: getDriver
+      summary: Consultar perfil y versión del agregado
+      description: >-
+        Conductor sólo propio; operador/administrador con autorización. Se devuelve ETag para todas las mutaciones del
+        agregado.
+      tags: [Drivers]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      responses:
+        '200': {$ref: '#/components/responses/DriverOk'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/vehicles:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: listVehicles
+      summary: Listar vehículos propios o autorizados
+      tags: [Vehicles]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/VehiclePage'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    post:
+      operationId: createVehicle
+      summary: Registrar vehículo
+      tags: [Vehicles]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateVehicle'}
+      responses:
+        '201':
+          description: Creado.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+            Location: {$ref: '#/components/headers/Location'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Vehicle'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/vehicles/{vehicleId}:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+      - {$ref: '#/components/parameters/VehicleId'}
+    get:
+      operationId: getVehicle
+      summary: Consultar vehículo del conductor
+      tags: [Vehicles]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Vehicle'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/documents:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: listDriverDocuments
+      summary: Consultar historial de licencia
+      tags: [Documents]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {$ref: '#/components/responses/DocumentPageOk'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    post:
+      operationId: submitDriverLicense
+      summary: Registrar nueva revisión de licencia
+      tags: [Documents]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SubmitLicense'}
+      responses:
+        '201': {$ref: '#/components/responses/DocumentCreated'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/vehicles/{vehicleId}/documents:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+      - {$ref: '#/components/parameters/VehicleId'}
+    get:
+      operationId: listVehicleDocuments
+      summary: Consultar documentación del vehículo
+      tags: [Documents]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {$ref: '#/components/responses/DocumentPageOk'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    post:
+      operationId: submitVehicleDocument
+      summary: Registrar revisión de seguro o documentación
+      tags: [Documents]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SubmitVehicleDocument'}
+      responses:
+        '201': {$ref: '#/components/responses/DocumentCreated'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/documents/{documentId}/reviews:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+      - {$ref: '#/components/parameters/DocumentId'}
+    post:
+      operationId: reviewDocument
+      summary: Revisar documento con motivo
+      description: >-
+        Admite documento del conductor o de uno de sus vehículos; comprobar la relación completa. Crea auditoría, no cambia
+        contenido de la revisión.
+      tags: [Documents]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReviewDocument'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Document'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/qualification-decisions:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: getDriverQualificationHistory
+      summary: Consultar historial de habilitación del conductor
+      tags: [Qualifications]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {$ref: '#/components/responses/QualificationPageOk'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    post:
+      operationId: decideDriverQualification
+      summary: Resolver habilitación del conductor
+      tags: [Qualifications]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QualificationDecisionInput'}
+      responses:
+        '201': {$ref: '#/components/responses/QualificationDecisionCreated'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/vehicles/{vehicleId}/qualification-decisions:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+      - {$ref: '#/components/parameters/VehicleId'}
+    get:
+      operationId: getVehicleQualificationHistory
+      summary: Consultar historial de habilitación del vehículo
+      tags: [Qualifications]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {$ref: '#/components/responses/QualificationPageOk'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    post:
+      operationId: decideVehicleQualification
+      summary: Resolver habilitación del vehículo
+      tags: [Qualifications]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QualificationDecisionInput'}
+      responses:
+        '201': {$ref: '#/components/responses/QualificationDecisionCreated'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/availability:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: getAvailabilityIntent
+      summary: Consultar intención y sincronización con M4
+      tags: [Availability]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Availability'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    put:
+      operationId: setAvailabilityIntent
+      summary: Cambiar conexión y disponibilidad solicitadas
+      description: >-
+        Siempre operación sobre perfil propio. Guarda intención + auditoría + comando durable en una sola transacción.
+        APPLIED no significa disponibilidad efectiva.
+      tags: [Availability]
+      x-planned-delivery: E1
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+        - {$ref: '#/components/parameters/IfMatch'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SetAvailability'}
+      responses:
+        '202':
+          description: Intención persistida; sincronización pendiente o en curso.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Availability'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '412': {$ref: '#/components/responses/Error412'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '428': {$ref: '#/components/responses/Error428'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/integration/drivers/{driverId}/eligibility:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: getEligibility
+      summary: Verificar elegibilidad actual para despacho
+      description: >-
+        Sólo servicios M4/M5/M6 autorizados. M5 debe revalidar antes de asignar. No crea reserva; M4 controla ocupación
+        y frescura. 200 con eligible=false es una evaluación válida, no error HTTP.
+      tags: [Integration]
+      x-planned-delivery: E1
+      x-required-service-scopes: ['m3:eligibility:read']
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - name: vehicleId
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+        - name: serviceType
+          in: query
+          required: true
+          schema: {type: string, enum: [AUTO, MOTO]}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Eligibility'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/integration/eligibility/batch:
+    post:
+      operationId: checkEligibilityBatch
+      summary: Verificar hasta 100 candidatos
+      description: >-
+        Consulta sin efectos: no requiere Idempotency-Key ni If-Match. No es un endpoint de creación. El límite y el control
+        de acceso se aplican igualmente.
+      tags: [Integration]
+      x-planned-delivery: E1
+      x-required-service-scopes: ['m3:eligibility:read']
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EligibilityBatchInput'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EligibilityBatchResult'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/integration/drivers/{driverId}/summary:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: getDriverSummary
+      summary: Consultar resumen mínimo
+      tags: [Integration]
+      x-planned-delivery: E1
+      x-required-service-scopes: ['m3:drivers:read']
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DriverSummary'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/drivers/{driverId}/customer-ratings:
+    parameters:
+      - {$ref: '#/components/parameters/DriverId'}
+    get:
+      operationId: listCustomerRatings
+      summary: Consultar valoraciones emitidas
+      tags: [Ratings]
+      x-planned-delivery: E2
+      x-allowed-human-roles: [Conductor, Operador, Administrador]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200':
+          description: Respuesta correcta.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RatingPage'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+    post:
+      operationId: createCustomerRating
+      summary: Valorar al cliente de un viaje completado
+      description: >-
+        M6 real en E2; adaptador simulado en pruebas E1. UNIQUE(tripId,driverId) impide duplicados aun con otra clave
+        idempotente. No cambia el agregado de habilitación: no requiere If-Match.
+      tags: [Ratings]
+      x-planned-delivery: E2
+      x-allowed-human-roles: [Conductor]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/IdempotencyKey'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateCustomerRating'}
+      responses:
+        '201':
+          description: Creado.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+            Location: {$ref: '#/components/headers/Location'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerRating'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '409': {$ref: '#/components/responses/Error409'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /health/live:
+    get:
+      operationId: checkLiveness
+      summary: Comprobar vida del proceso
+      tags: [Health]
+      x-planned-delivery: E1
+      security: []
+      responses:
+        '200':
+          description: Salud correcta.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Liveness'}
+
+  /health/ready:
+    get:
+      operationId: checkReadiness
+      summary: Comprobar capacidad básica de atender
+      tags: [Health]
+      x-planned-delivery: E1
+      security: []
+      responses:
+        '200':
+          description: Salud correcta.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Readiness'}
+        '503':
+          description: M3 no puede atender operaciones básicas, por ejemplo por caída de PostgreSQL.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Readiness'}
+
+# DEFINICIONES REUTILIZABLES
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Access token emitido por el M1 acordado. Verificar firma/JWKS, issuer, audience, algoritmo, exp, nbf, tipo de
+        principal y permisos; nunca sólo decodificar.
+  parameters:
+    DriverId:
+      name: driverId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    VehicleId:
+      name: vehicleId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        Clave opaca única por principal + método + ruta normalizada. Retención propuesta 7 días. Mismo body: misma respuesta;
+        body diferente: 409. Nunca contiene datos personales.
+      schema: {type: string, minLength: 16, maxLength: 128}
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: >-
+        ETag del agregado conductor obtenido por GET /api/v1/drivers/{driverId}; por ejemplo "7". Se verifica tras autenticar
+        y resolver un replay idempotente. Falta: 428; versión anterior: 412.
+      schema: {type: string, pattern: '^"[1-9][0-9]*"$', example: '"7"'}
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema: {type: string, maxLength: 512}
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: {type: string, minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9._-]+$'}
+      description: >-
+        Identificador no sensible. Si falta o no es aceptable, el servidor genera uno; no se copia texto arbitrario a
+        logs.
+  headers:
+    CorrelationId:
+      description: Identificador de correlación de esta petición.
+      schema: {type: string}
+    DriverETag:
+      description: Versión del agregado conductor, cuando corresponda. No es la versión de M4.
+      schema: {type: string, example: '"7"'}
+    Location:
+      description: URI del recurso creado o colección que permite recuperarlo.
+      schema: {type: string, format: uri-reference}
+    Authenticate:
+      schema: {type: string, example: Bearer}
+      description: Desafío de autenticación Bearer.
+    RetryAfter:
+      schema: {type: integer, minimum: 1}
+      description: Espera orientativa en segundos, cuando se pueda calcular.
+  responses:
+    Error400:
+      description: Solicitud inválida o campos no permitidos.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error401:
+      description: Token faltante, inválido o vencido.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        WWW-Authenticate: {$ref: '#/components/headers/Authenticate'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error403:
+      description: Principal sin permisos. Para ocultar existencia ajena puede usarse 404 según política.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error404:
+      description: Recurso inexistente o no visible para este principal.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error409:
+      description: Conflicto de negocio, duplicado o clave idempotente reutilizada con otro payload.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error412:
+      description: If-Match no coincide con la versión actual.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error422:
+      description: Regla de negocio incumplida; por ejemplo documentación insuficiente o viaje no completado.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error428:
+      description: Falta If-Match requerido.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error429:
+      description: Límite de solicitudes excedido.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        Retry-After: {$ref: '#/components/headers/RetryAfter'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Error503:
+      description: Dependencia indispensable indisponible; no se finge éxito.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        Retry-After: {$ref: '#/components/headers/RetryAfter'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    DriverOk:
+      description: Respuesta correcta.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        ETag: {$ref: '#/components/headers/DriverETag'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Driver'}
+    DocumentPageOk:
+      description: Respuesta correcta.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        ETag: {$ref: '#/components/headers/DriverETag'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/DocumentPage'}
+    DocumentCreated:
+      description: Creado.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        ETag: {$ref: '#/components/headers/DriverETag'}
+        Location: {$ref: '#/components/headers/Location'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Document'}
+    QualificationPageOk:
+      description: Respuesta correcta.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        ETag: {$ref: '#/components/headers/DriverETag'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/QualificationPage'}
+    QualificationDecisionCreated:
+      description: Creado.
+      headers:
+        X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        ETag: {$ref: '#/components/headers/DriverETag'}
+        Location: {$ref: '#/components/headers/Location'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/QualificationDecision'}
+  schemas:
+
+
+    Problem:
+      type: object
+      additionalProperties: false
+      properties:
+        type: {type: string, format: uri-reference, example: 'urn:m3:problem:validation'}
+        title: {type: string}
+        status: {type: integer, minimum: 400, maximum: 599}
+        detail: {type: string}
+        instance: {type: string, format: uri-reference, example: 'urn:request:demo-123'}
+        code: {type: string}
+        correlationId: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              field: {type: string}
+              message: {type: string}
+            required: [field, message]
+      required: [type, title, status, code, correlationId]
+
+
+    CreateDriver:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName: {type: string, minLength: 1, maxLength: 100}
+      required: [displayName]
+      description: Perfil propio. identitySubject se obtiene del JWT de usuario; no se acepta por body.
+
+
+    Driver:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid}
+        displayName: {type: string, maxLength: 100}
+        qualificationStatus: {type: string, enum: [PENDING, APPROVED, OBSERVED, SUSPENDED, REJECTED]}
+        version: {type: integer, minimum: 1, format: int64}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+      required: [id, displayName, qualificationStatus, version, createdAt, updatedAt]
+
+
+    CreateVehicle:
+      type: object
+      additionalProperties: false
+      properties:
+        vehicleType: {type: string, enum: [AUTO, MOTO]}
+        serviceTypes:
+          type: array
+          items: {type: string, enum: [AUTO, MOTO]}
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+        countryCode: {type: string, pattern: '^[A-Z]{2}$', example: AR}
+        plate: {type: string, minLength: 1, maxLength: 16}
+        make: {type: string, minLength: 1, maxLength: 60}
+        model: {type: string, minLength: 1, maxLength: 60}
+        modelYear: {type: integer, minimum: 1900, maximum: 2200}
+      required: [vehicleType, serviceTypes, countryCode, plate, make, model, modelYear]
+      description: >-
+        La aplicación valida compatibilidad entre vehicleType y serviceTypes y año respecto del reloj, además del esquema.
+
+
+    Vehicle:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid}
+        driverId: {type: string, format: uuid}
+        vehicleType: {type: string, enum: [AUTO, MOTO]}
+        serviceTypes:
+          type: array
+          items: {type: string, enum: [AUTO, MOTO]}
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+        countryCode: {type: string, pattern: '^[A-Z]{2}$', example: AR}
+        plate: {type: string, minLength: 1, maxLength: 16}
+        make: {type: string, minLength: 1, maxLength: 60}
+        model: {type: string, minLength: 1, maxLength: 60}
+        modelYear: {type: integer, minimum: 1900, maximum: 2200}
+        qualificationStatus: {type: string, enum: [PENDING, APPROVED, OBSERVED, SUSPENDED, REJECTED]}
+        driverVersion: {type: integer, minimum: 1, format: int64}
+        createdAt: {type: string, format: date-time}
+      required:
+        - id
+        - driverId
+        - vehicleType
+        - serviceTypes
+        - countryCode
+        - plate
+        - make
+        - model
+        - modelYear
+        - qualificationStatus
+        - driverVersion
+        - createdAt
+
+
+    SubmitLicense:
+      type: object
+      additionalProperties: false
+      properties:
+        documentNumber: {type: string, minLength: 1, maxLength: 80}
+        issuedAt: {type: string, format: date-time}
+        validUntil: {type: string, format: date-time}
+        serviceTypes:
+          type: array
+          items: {type: string, enum: [AUTO, MOTO]}
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+        storageReference: {type: string, minLength: 1, maxLength: 200}
+      required: [documentNumber, issuedAt, validUntil, serviceTypes]
+      description: >-
+        Metadatos de licencia. storageReference es opcional y opaca; nunca una URL pública ni un archivo embebido. Se
+        valida issuedAt < validUntil.
+
+
+    SubmitVehicleDocument:
+      type: object
+      additionalProperties: false
+      properties:
+        kind: {type: string, enum: [INSURANCE, VEHICLE_REGISTRATION]}
+        documentNumber: {type: string, minLength: 1, maxLength: 80}
+        issuedAt: {type: string, format: date-time}
+        validUntil: {type: string, format: date-time}
+        storageReference: {type: string, minLength: 1, maxLength: 200}
+      required: [kind, documentNumber, issuedAt, validUntil]
+      description: Los vencimientos y categorías son reglas propuestas a confirmar. No se reciben binarios.
+
+
+    Document:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid}
+        driverId: {type: string, format: uuid}
+        vehicleId: {type: string, format: uuid, nullable: true}
+        kind: {type: string, enum: [LICENSE, INSURANCE, VEHICLE_REGISTRATION]}
+        revision: {type: integer, minimum: 1}
+        reviewStatus: {type: string, enum: [PENDING, APPROVED, OBSERVED, REJECTED]}
+        issuedAt: {type: string, format: date-time}
+        validUntil: {type: string, format: date-time}
+        isCurrent: {type: boolean}
+        serviceTypes:
+          type: array
+          items: {type: string, enum: [AUTO, MOTO]}
+          uniqueItems: true
+        driverVersion: {type: integer, minimum: 1, format: int64}
+        createdAt: {type: string, format: date-time}
+      required:
+        - id
+        - driverId
+        - vehicleId
+        - kind
+        - revision
+        - reviewStatus
+        - issuedAt
+        - validUntil
+        - isCurrent
+        - driverVersion
+        - createdAt
+      description: >-
+        Respuesta sin número documental ni ubicación de archivo. Para revisar el TPI se trabaja con los metadatos no sensibles;
+        acceso adicional requeriría operación privilegiada específica.
+
+
+    ReviewDocument:
+      type: object
+      additionalProperties: false
+      properties:
+        decision: {type: string, enum: [APPROVED, OBSERVED, REJECTED]}
+        reason: {type: string, minLength: 1, maxLength: 500}
+      required: [decision, reason]
+
+
+    QualificationDecisionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        decision: {type: string, enum: [APPROVED, OBSERVED, SUSPENDED, REJECTED]}
+        reason: {type: string, minLength: 1, maxLength: 500}
+      required: [decision, reason]
+      description: >-
+        Sólo Operador/Administrador humano. No equivale a editar libremente un estado. La aprobación exige documentos
+        actuales revisados y vigentes.
+
+
+    QualificationDecision:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid}
+        driverId: {type: string, format: uuid}
+        vehicleId: {type: string, format: uuid, nullable: true}
+        previousStatus: {type: string, enum: [PENDING, APPROVED, OBSERVED, SUSPENDED, REJECTED]}
+        newStatus: {type: string, enum: [PENDING, APPROVED, OBSERVED, SUSPENDED, REJECTED]}
+        reason: {type: string}
+        actorSubject: {type: string}
+        driverVersion: {type: integer, minimum: 1, format: int64}
+        occurredAt: {type: string, format: date-time}
+      required: [id, driverId, vehicleId, previousStatus, newStatus, reason, actorSubject, driverVersion, occurredAt]
+
+
+    SetAvailability:
+      type: object
+      additionalProperties: false
+      properties:
+        connected: {type: boolean}
+        available: {type: boolean}
+        activeVehicleId: {type: string, format: uuid, nullable: true}
+      required: [connected, available, activeVehicleId]
+      description: >-
+        available=true exige connected=true y vehículo elegible. disconnected implica available=false. Guarda intención;
+        M4 decide disponibilidad efectiva, reserva y ocupación.
+
+
+    Availability:
+      type: object
+      additionalProperties: false
+      properties:
+        driverId: {type: string, format: uuid}
+        desired: {$ref: '#/components/schemas/SetAvailability'}
+        desiredVersion: {type: integer, minimum: 1, format: int64}
+        lastAppliedVersion: {type: integer, format: int64, minimum: 0}
+        syncStatus: {type: string, enum: [PENDING, APPLIED, RETRYING, FAILED]}
+        driverVersion: {type: integer, minimum: 1, format: int64}
+        updatedAt: {type: string, format: date-time}
+        lastSyncAt: {type: string, format: date-time, nullable: true}
+      required: [driverId, desired, desiredVersion, lastAppliedVersion, syncStatus, driverVersion, updatedAt, 
+            lastSyncAt]
+      description: >-
+        APPLIED confirma recepción de la intención por M4; no significa libre, ubicación vigente ni ausencia de viaje.
+        Estado inicial: desconectado/no disponible.
+
+
+    EligibilityItem:
+      type: object
+      additionalProperties: false
+      properties:
+        driverId: {type: string, format: uuid}
+        vehicleId: {type: string, format: uuid}
+        serviceType: {type: string, enum: [AUTO, MOTO]}
+      required: [driverId, vehicleId, serviceType]
+
+
+    Eligibility:
+      type: object
+      additionalProperties: false
+      properties:
+        driverId: {type: string, format: uuid}
+        vehicleId: {type: string, format: uuid}
+        serviceType: {type: string, enum: [AUTO, MOTO]}
+        eligible: {type: boolean}
+        reasons:
+          type: array
+          items:
+            type: string
+            enum:
+              - DRIVER_NOT_FOUND
+              - VEHICLE_NOT_FOUND
+              - VEHICLE_NOT_OWNED
+              - DRIVER_NOT_APPROVED
+              - VEHICLE_NOT_APPROVED
+              - LICENSE_MISSING
+              - LICENSE_NOT_APPROVED
+              - LICENSE_EXPIRED
+              - INSURANCE_MISSING
+              - INSURANCE_NOT_APPROVED
+              - INSURANCE_EXPIRED
+              - VEHICLE_DOCUMENT_MISSING
+              - VEHICLE_DOCUMENT_NOT_APPROVED
+              - VEHICLE_DOCUMENT_EXPIRED
+              - SERVICE_TYPE_NOT_ALLOWED
+              - DRIVER_DISCONNECTED
+              - NOT_ACCEPTING_REQUESTS
+              - VEHICLE_NOT_SELECTED
+          uniqueItems: true
+        driverVersion: {type: integer, minimum: 0, format: int64}
+        checkedAt: {type: string, format: date-time}
+        validUntil: {type: string, format: date-time, nullable: true}
+      required: [driverId, vehicleId, serviceType, eligible, reasons, driverVersion, checkedAt, validUntil]
+      description: >-
+        Decisión de M3 basada en datos confirmados al instante checkedAt. No es reserva ni asignación. validUntil limita
+        vigencia documental, no garantiza ausencia de cambios posteriores. Sin caché positiva de elegibilidad.
+
+
+    EligibilityBatchInput:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/EligibilityItem'}
+          minItems: 1
+          maxItems: 100
+      required: [items]
+
+
+    EligibilityBatchResult:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Eligibility'}
+          maxItems: 100
+      required: [items]
+      description: >-
+        Un resultado por entrada y en el mismo orden. IDs inexistentes: eligible=false y razón *_NOT_FOUND; consulta individual:
+        404.
+
+
+    DriverSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        driverId: {type: string, format: uuid}
+        displayName: {type: string, maxLength: 100}
+      required: [driverId, displayName]
+      description: Resumen mínimo de servicio. No incluye identidad M1, licencia, seguro, domicilio ni historial 
+        privado.
+
+
+    CreateCustomerRating:
+      type: object
+      additionalProperties: false
+      properties:
+        tripId: {type: string, minLength: 1, maxLength: 128}
+        score: {type: integer, minimum: 1, maximum: 5}
+        comment: {type: string, maxLength: 500}
+      required: [tripId, score]
+      description: >-
+        clientId y conductor asignado se obtienen de M6. Sólo el conductor del viaje completado puede valorar. No se acepta
+        clientId por body.
+
+
+    CustomerRating:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid}
+        tripId: {type: string, minLength: 1, maxLength: 128}
+        driverId: {type: string, format: uuid}
+        clientId: {type: string, minLength: 1, maxLength: 128}
+        score: {type: integer, minimum: 1, maximum: 5}
+        comment: {type: string, maxLength: 500}
+        createdAt: {type: string, format: date-time}
+      required: [id, tripId, driverId, clientId, score, createdAt]
+
+
+    DriverPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Driver'}
+          maxItems: 100
+        nextCursor: {type: string, nullable: true}
+      required: [items, nextCursor]
+
+
+    VehiclePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Vehicle'}
+          maxItems: 100
+        nextCursor: {type: string, nullable: true}
+      required: [items, nextCursor]
+
+
+    DocumentPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Document'}
+          maxItems: 100
+        nextCursor: {type: string, nullable: true}
+      required: [items, nextCursor]
+
+
+    QualificationPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/QualificationDecision'}
+          maxItems: 100
+        nextCursor: {type: string, nullable: true}
+      required: [items, nextCursor]
+
+
+    RatingPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CustomerRating'}
+          maxItems: 100
+        nextCursor: {type: string, nullable: true}
+      required: [items, nextCursor]
+
+
+    Liveness:
+      type: object
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [ok]}
+      required: [status]
+
+
+    Readiness:
+      type: object
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [ready, not_ready]}
+      required: [status]
+      description: Respuesta pública mínima. Detalle de dependencias sólo en diagnóstico protegido.
