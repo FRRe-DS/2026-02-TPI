@@ -1,41 +1,38 @@
-package ar.edu.utn.frre.m3.adapter.persistence.adapter;
+package ar.edu.utn.frre.m3.adapter.persistence;
 
 import ar.edu.utn.frre.m3.adapter.persistence.entity.DriverJpaEntity;
 import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataDriverRepository;
-import ar.edu.utn.frre.m3.application.port.out.DriverRepositoryPort;
-import ar.edu.utn.frre.m3.domain.model.Driver;
-import ar.edu.utn.frre.m3.domain.model.QualificationStatus;
-import org.springframework.stereotype.Component;
+import ar.edu.utn.frre.m3.application.port.DriverRepository;
+import ar.edu.utn.frre.m3.domain.Driver;
+import ar.edu.utn.frre.m3.domain.QualificationStatus;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
-@Component
-public class DriverPersistenceAdapter implements DriverRepositoryPort {
+@Repository
+public class DriverPersistenceAdapter implements DriverRepository {
 
-    private final SpringDataDriverRepository driverRepository;
+    private final SpringDataDriverRepository repository;
 
-    public DriverPersistenceAdapter(SpringDataDriverRepository driverRepository) {
-        this.driverRepository = driverRepository;
+    public DriverPersistenceAdapter(SpringDataDriverRepository repository) {
+        this.repository = repository;
     }
 
     @Override
-    public Optional<Driver> findByIdWithPessimisticLock(UUID driverId) {
-        return driverRepository.findByIdWithPessimisticLock(driverId)
-                .map(this::toDomain);
+    public Optional<Driver> findByIdWithPessimisticLock(UUID id) {
+        return repository.findByIdWithPessimisticLock(id).map(this::toDomain);
     }
 
     @Override
-    public Optional<Driver> findById(UUID driverId) {
-        return driverRepository.findById(driverId)
-                .map(this::toDomain);
+    public Optional<Driver> findById(UUID id) {
+        return repository.findById(id).map(this::toDomain);
     }
 
     @Override
     public Driver save(Driver driver) {
         DriverJpaEntity entity = toEntity(driver);
-        DriverJpaEntity saved = driverRepository.save(entity);
-        return toDomain(saved);
+        return toDomain(repository.save(entity));
     }
 
     private Driver toDomain(DriverJpaEntity entity) {

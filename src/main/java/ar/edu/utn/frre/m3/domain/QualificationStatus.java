@@ -1,4 +1,4 @@
-package ar.edu.utn.frre.m3.domain.model;
+package ar.edu.utn.frre.m3.domain;
 
 public enum QualificationStatus {
     PENDING,

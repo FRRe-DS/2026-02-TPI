@@ -1,6 +1,6 @@
 package ar.edu.utn.frre.m3.adapter.rest.dto;
 
-import ar.edu.utn.frre.m3.domain.model.ReviewDecision;
+import ar.edu.utn.frre.m3.domain.ReviewDecision;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

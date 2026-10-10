@@ -1,11 +1,10 @@
-package ar.edu.utn.frre.m3.domain.model;
+package ar.edu.utn.frre.m3.domain;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 public class AuditLog {
-
     private final UUID id;
     private final String entityType;
     private final UUID entityId;
@@ -20,8 +19,7 @@ public class AuditLog {
 
     public AuditLog(UUID id, String entityType, UUID entityId, UUID driverId,
                     String action, String actor, String previousStatus,
-                    String newStatus, String reason, String correlationId,
-                    Instant createdAt) {
+                    String newStatus, String reason, String correlationId, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "Audit log ID must not be null");
         this.entityType = Objects.requireNonNull(entityType, "Entity type must not be null");
         this.entityId = Objects.requireNonNull(entityId, "Entity ID must not be null");
@@ -35,47 +33,15 @@ public class AuditLog {
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getEntityType() {
-        return entityType;
-    }
-
-    public UUID getEntityId() {
-        return entityId;
-    }
-
-    public UUID getDriverId() {
-        return driverId;
-    }
-
-    public String getAction() {
-        return action;
-    }
-
-    public String getActor() {
-        return actor;
-    }
-
-    public String getPreviousStatus() {
-        return previousStatus;
-    }
-
-    public String getNewStatus() {
-        return newStatus;
-    }
-
-    public String getReason() {
-        return reason;
-    }
-
-    public String getCorrelationId() {
-        return correlationId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public UUID getId() { return id; }
+    public String getEntityType() { return entityType; }
+    public UUID getEntityId() { return entityId; }
+    public UUID getDriverId() { return driverId; }
+    public String getAction() { return action; }
+    public String getActor() { return actor; }
+    public String getPreviousStatus() { return previousStatus; }
+    public String getNewStatus() { return newStatus; }
+    public String getReason() { return reason; }
+    public String getCorrelationId() { return correlationId; }
+    public Instant getCreatedAt() { return createdAt; }
 }

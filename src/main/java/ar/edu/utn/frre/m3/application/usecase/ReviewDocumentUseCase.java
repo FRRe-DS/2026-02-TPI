@@ -1,6 +1,6 @@
-package ar.edu.utn.frre.m3.application.port.in;
+package ar.edu.utn.frre.m3.application.usecase;
 
-import ar.edu.utn.frre.m3.domain.model.Document;
+import ar.edu.utn.frre.m3.domain.Document;
 
 public interface ReviewDocumentUseCase {
     Document reviewDocument(ReviewDocumentCommand command);

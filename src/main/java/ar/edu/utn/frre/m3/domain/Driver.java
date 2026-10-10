@@ -1,13 +1,11 @@
-package ar.edu.utn.frre.m3.domain.model;
+package ar.edu.utn.frre.m3.domain;
 
 import ar.edu.utn.frre.m3.domain.exception.VersionMismatchException;
-
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 public class Driver {
-
     private final UUID id;
     private String identitySubject;
     private String displayName;
@@ -39,51 +37,11 @@ public class Driver {
         }
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getIdentitySubject() {
-        return identitySubject;
-    }
-
-    public void setIdentitySubject(String identitySubject) {
-        this.identitySubject = identitySubject;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public QualificationStatus getQualificationStatus() {
-        return qualificationStatus;
-    }
-
-    public void setQualificationStatus(QualificationStatus qualificationStatus) {
-        this.qualificationStatus = qualificationStatus;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public void setVersion(long version) {
-        this.version = version;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public UUID getId() { return id; }
+    public String getIdentitySubject() { return identitySubject; }
+    public String getDisplayName() { return displayName; }
+    public QualificationStatus getQualificationStatus() { return qualificationStatus; }
+    public long getVersion() { return version; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

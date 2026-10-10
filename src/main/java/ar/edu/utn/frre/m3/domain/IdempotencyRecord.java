@@ -1,11 +1,10 @@
-package ar.edu.utn.frre.m3.domain.model;
+package ar.edu.utn.frre.m3.domain;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 public class IdempotencyRecord {
-
     private final UUID id;
     private final String idempotencyKey;
     private final String principal;
@@ -30,39 +29,13 @@ public class IdempotencyRecord {
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getIdempotencyKey() {
-        return idempotencyKey;
-    }
-
-    public String getPrincipal() {
-        return principal;
-    }
-
-    public String getHttpMethod() {
-        return httpMethod;
-    }
-
-    public String getRequestPath() {
-        return requestPath;
-    }
-
-    public String getRequestHash() {
-        return requestHash;
-    }
-
-    public int getResponseStatus() {
-        return responseStatus;
-    }
-
-    public String getResponseBody() {
-        return responseBody;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public UUID getId() { return id; }
+    public String getIdempotencyKey() { return idempotencyKey; }
+    public String getPrincipal() { return principal; }
+    public String getHttpMethod() { return httpMethod; }
+    public String getRequestPath() { return requestPath; }
+    public String getRequestHash() { return requestHash; }
+    public int getResponseStatus() { return responseStatus; }
+    public String getResponseBody() { return responseBody; }
+    public Instant getCreatedAt() { return createdAt; }
 }

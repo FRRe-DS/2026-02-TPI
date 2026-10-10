@@ -1,7 +1,6 @@
-package ar.edu.utn.frre.m3.application.port.in;
+package ar.edu.utn.frre.m3.application.usecase;
 
-import ar.edu.utn.frre.m3.domain.model.ReviewDecision;
-
+import ar.edu.utn.frre.m3.domain.ReviewDecision;
 import java.util.UUID;
 
 public record ReviewDocumentCommand(

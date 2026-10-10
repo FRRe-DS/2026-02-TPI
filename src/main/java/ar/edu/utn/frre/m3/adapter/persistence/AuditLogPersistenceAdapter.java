@@ -1,18 +1,18 @@
-package ar.edu.utn.frre.m3.adapter.persistence.adapter;
+package ar.edu.utn.frre.m3.adapter.persistence;
 
 import ar.edu.utn.frre.m3.adapter.persistence.entity.AuditLogJpaEntity;
 import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataAuditLogRepository;
-import ar.edu.utn.frre.m3.application.port.out.AuditLogRepositoryPort;
-import ar.edu.utn.frre.m3.domain.model.AuditLog;
-import org.springframework.stereotype.Component;
+import ar.edu.utn.frre.m3.application.port.AuditLogRepository;
+import ar.edu.utn.frre.m3.domain.AuditLog;
+import org.springframework.stereotype.Repository;
 
-@Component
-public class AuditLogPersistenceAdapter implements AuditLogRepositoryPort {
+@Repository
+public class AuditLogPersistenceAdapter implements AuditLogRepository {
 
-    private final SpringDataAuditLogRepository auditLogRepository;
+    private final SpringDataAuditLogRepository repository;
 
-    public AuditLogPersistenceAdapter(SpringDataAuditLogRepository auditLogRepository) {
-        this.auditLogRepository = auditLogRepository;
+    public AuditLogPersistenceAdapter(SpringDataAuditLogRepository repository) {
+        this.repository = repository;
     }
 
     @Override
@@ -30,6 +30,6 @@ public class AuditLogPersistenceAdapter implements AuditLogRepositoryPort {
                 auditLog.getCorrelationId(),
                 auditLog.getCreatedAt()
         );
-        auditLogRepository.save(entity);
+        repository.save(entity);
     }
 }
