@@ -1,0 +1,41 @@
+package ar.edu.utn.frre.m3.adapter.rest.dto;
+
+import ar.edu.utn.frre.m3.domain.Vehicle;
+import java.time.Instant;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * DTO de respuesta para un vehículo según el esquema OpenAPI.
+ */
+public record VehicleResponse(
+    UUID id,
+    UUID driverId,
+    String vehicleType,
+    Set<String> serviceTypes,
+    String countryCode,
+    String plate,
+    String make,
+    String model,
+    Integer modelYear,
+    String qualificationStatus,
+    Long driverVersion,
+    Instant createdAt
+) {
+    public static VehicleResponse fromDomain(Vehicle v) {
+        return new VehicleResponse(
+            v.getId(),
+            v.getDriverId(),
+            v.getVehicleType(),
+            v.getServiceTypes(),
+            v.getCountryCode(),
+            v.getPlate(),
+            v.getMake(),
+            v.getModel(),
+            v.getModelYear(),
+            v.getQualificationStatus(),
+            v.getDriverVersion(),
+            v.getCreatedAt()
+        );
+    }
+}

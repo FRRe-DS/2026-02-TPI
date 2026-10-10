@@ -1,14 +1,20 @@
 package ar.edu.utn.frre.m3.adapter.persistence.entity;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * JPA Entity mapping the 'vehicles' table for read-only validation queries in HU-06.
+ * Entidad JPA que mapea la tabla 'vehicles' y su relación con 'vehicle_services'.
  */
 @Entity
 @Table(name = "vehicles")
@@ -23,6 +29,14 @@ public class VehicleJpaEntity {
 
     @Column(name = "vehicle_type")
     private String vehicleType;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "vehicle_services", joinColumns = @JoinColumn(name = "vehicle_id"))
+    @Column(name = "service_type")
+    private Set<String> serviceTypes = new HashSet<>();
+
+    @Column(name = "country_code", length = 2)
+    private String countryCode = "AR";
 
     @Column(name = "plate")
     private String plate;
@@ -52,6 +66,8 @@ public class VehicleJpaEntity {
         UUID id,
         UUID driverId,
         String vehicleType,
+        Set<String> serviceTypes,
+        String countryCode,
         String plate,
         String make,
         String model,
@@ -63,6 +79,8 @@ public class VehicleJpaEntity {
         this.id = id;
         this.driverId = driverId;
         this.vehicleType = vehicleType;
+        this.serviceTypes = serviceTypes != null ? serviceTypes : new HashSet<>();
+        this.countryCode = countryCode != null ? countryCode : "AR";
         this.plate = plate;
         this.make = make;
         this.model = model;
@@ -72,84 +90,39 @@ public class VehicleJpaEntity {
         this.createdAt = createdAt;
     }
 
-    public UUID getId() {
-        return id;
-    }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    public UUID getDriverId() { return driverId; }
+    public void setDriverId(UUID driverId) { this.driverId = driverId; }
 
-    public UUID getDriverId() {
-        return driverId;
-    }
+    public String getVehicleType() { return vehicleType; }
+    public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
 
-    public void setDriverId(UUID driverId) {
-        this.driverId = driverId;
-    }
+    public Set<String> getServiceTypes() { return serviceTypes; }
+    public void setServiceTypes(Set<String> serviceTypes) { this.serviceTypes = serviceTypes; }
 
-    public String getVehicleType() {
-        return vehicleType;
-    }
+    public String getCountryCode() { return countryCode; }
+    public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
 
-    public void setVehicleType(String vehicleType) {
-        this.vehicleType = vehicleType;
-    }
+    public String getPlate() { return plate; }
+    public void setPlate(String plate) { this.plate = plate; }
 
-    public String getPlate() {
-        return plate;
-    }
+    public String getMake() { return make; }
+    public void setMake(String make) { this.make = make; }
 
-    public void setPlate(String plate) {
-        this.plate = plate;
-    }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
 
-    public String getMake() {
-        return make;
-    }
+    public Integer getModelYear() { return modelYear; }
+    public void setModelYear(Integer modelYear) { this.modelYear = modelYear; }
 
-    public void setMake(String make) {
-        this.make = make;
-    }
+    public String getQualificationStatus() { return qualificationStatus; }
+    public void setQualificationStatus(String qualificationStatus) { this.qualificationStatus = qualificationStatus; }
 
-    public String getModel() {
-        return model;
-    }
+    public Long getDriverVersion() { return driverVersion; }
+    public void setDriverVersion(Long driverVersion) { this.driverVersion = driverVersion; }
 
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public Integer getModelYear() {
-        return modelYear;
-    }
-
-    public void setModelYear(Integer modelYear) {
-        this.modelYear = modelYear;
-    }
-
-    public String getQualificationStatus() {
-        return qualificationStatus;
-    }
-
-    public void setQualificationStatus(String qualificationStatus) {
-        this.qualificationStatus = qualificationStatus;
-    }
-
-    public Long getDriverVersion() {
-        return driverVersion;
-    }
-
-    public void setDriverVersion(Long driverVersion) {
-        this.driverVersion = driverVersion;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
-

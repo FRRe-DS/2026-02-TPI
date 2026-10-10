@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: m3-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: m3_db
+      POSTGRES_USER: m3_user
+      POSTGRES_PASSWORD: m3_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - m3_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U m3_user -d m3_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  m3_pgdata:
