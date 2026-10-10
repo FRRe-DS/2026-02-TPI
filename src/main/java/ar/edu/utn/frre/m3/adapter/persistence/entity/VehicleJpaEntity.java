@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * JPA Entity mapping the 'vehicles' table for read-only validation queries in HU-06.
+ * JPA Entity mapping the 'vehicles' table.
  */
 @Entity
 @Table(name = "vehicles")
@@ -23,6 +23,12 @@ public class VehicleJpaEntity {
 
     @Column(name = "vehicle_type")
     private String vehicleType;
+
+    @Column(name = "service_types", length = 50)
+    private String serviceTypes;
+
+    @Column(name = "country_code", length = 2)
+    private String countryCode;
 
     @Column(name = "plate")
     private String plate;
@@ -44,6 +50,9 @@ public class VehicleJpaEntity {
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     public VehicleJpaEntity() {
     }
@@ -72,6 +81,36 @@ public class VehicleJpaEntity {
         this.createdAt = createdAt;
     }
 
+    public VehicleJpaEntity(
+        UUID id,
+        UUID driverId,
+        String vehicleType,
+        String serviceTypes,
+        String countryCode,
+        String plate,
+        String make,
+        String model,
+        Integer modelYear,
+        String qualificationStatus,
+        Long driverVersion,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+        this.id = id;
+        this.driverId = driverId;
+        this.vehicleType = vehicleType;
+        this.serviceTypes = serviceTypes;
+        this.countryCode = countryCode;
+        this.plate = plate;
+        this.make = make;
+        this.model = model;
+        this.modelYear = modelYear;
+        this.qualificationStatus = qualificationStatus;
+        this.driverVersion = driverVersion;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -94,6 +133,22 @@ public class VehicleJpaEntity {
 
     public void setVehicleType(String vehicleType) {
         this.vehicleType = vehicleType;
+    }
+
+    public String getServiceTypes() {
+        return serviceTypes;
+    }
+
+    public void setServiceTypes(String serviceTypes) {
+        this.serviceTypes = serviceTypes;
+    }
+
+    public String getCountryCode() {
+        return countryCode;
+    }
+
+    public void setCountryCode(String countryCode) {
+        this.countryCode = countryCode;
     }
 
     public String getPlate() {
@@ -144,6 +199,14 @@ public class VehicleJpaEntity {
         this.driverVersion = driverVersion;
     }
 
+    public Long getVersion() {
+        return driverVersion;
+    }
+
+    public void setVersion(Long version) {
+        this.driverVersion = version;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -151,5 +214,12 @@ public class VehicleJpaEntity {
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
-}
 
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}

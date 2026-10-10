@@ -16,4 +16,3 @@ public interface SpringDataDocumentRepository extends JpaRepository<DocumentJpaE
 
     List<DocumentJpaEntity> findByVehicleIdOrderByRevisionDesc(UUID vehicleId);
 }
-

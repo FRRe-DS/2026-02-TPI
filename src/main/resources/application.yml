@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: m3-drivers-vehicles
+  profiles:
+    active: local
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/m3_db}
     username: ${SPRING_DATASOURCE_USERNAME:m3_user}
@@ -25,4 +27,3 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
-

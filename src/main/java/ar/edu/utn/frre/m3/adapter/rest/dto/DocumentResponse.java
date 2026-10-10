@@ -7,47 +7,43 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Response DTO representing a registered vehicle document revision.
- */
 public record DocumentResponse(
-    UUID id,
-    UUID driverId,
-    UUID vehicleId,
-    DocumentType documentType,
-    @JsonProperty("kind") DocumentType kind,
-    String documentNumber,
-    String issuingEntity,
-    int revision,
-    DocumentStatus status,
-    @JsonProperty("reviewStatus") DocumentStatus reviewStatus,
-    Instant issuedAt,
-    Instant validUntil,
-    @JsonProperty("isCurrent") boolean isCurrent,
-    String storageReference,
-    Instant createdAt
+        UUID id,
+        UUID driverId,
+        UUID vehicleId,
+        DocumentType documentType,
+        @JsonProperty("kind") DocumentType kind,
+        String documentNumber,
+        String issuingEntity,
+        int revision,
+        DocumentStatus status,
+        @JsonProperty("reviewStatus") DocumentStatus reviewStatus,
+        Instant issuedAt,
+        Instant validUntil,
+        @JsonProperty("isCurrent") boolean isCurrent,
+        String storageReference,
+        Long driverVersion,
+        Instant createdAt
 ) {
     public static DocumentResponse fromDomain(Document document) {
-        if (document == null) {
-            return null;
-        }
+        if (document == null) return null;
         return new DocumentResponse(
-            document.getId(),
-            document.getDriverId(),
-            document.getVehicleId(),
-            document.getDocumentType(),
-            document.getDocumentType(),
-            document.getDocumentNumber(),
-            document.getIssuingEntity(),
-            document.getRevision(),
-            document.getStatus(),
-            document.getStatus(),
-            document.getIssuedAt(),
-            document.getValidUntil(),
-            document.isCurrent(),
-            document.getStorageReference(),
-            document.getCreatedAt()
+                document.getId(),
+                document.getDriverId(),
+                document.getVehicleId(),
+                document.getDocumentType(),
+                document.getDocumentType(),
+                document.getDocumentNumber(),
+                document.getIssuingEntity(),
+                document.getRevision(),
+                document.getStatus(),
+                document.getStatus(),
+                document.getIssuedAt(),
+                document.getValidUntil(),
+                document.isCurrent(),
+                document.getStorageReference(),
+                document.getDriverVersion(),
+                document.getCreatedAt()
         );
     }
 }
-

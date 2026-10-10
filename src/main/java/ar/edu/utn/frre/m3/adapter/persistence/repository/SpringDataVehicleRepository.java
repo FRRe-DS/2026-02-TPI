@@ -5,8 +5,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Spring Data JPA repository for VehicleJpaEntity (read operations for HU-06).
+ * Spring Data JPA repository for VehicleJpaEntity.
  */
 public interface SpringDataVehicleRepository extends JpaRepository<VehicleJpaEntity, UUID> {
-}
 
+    boolean existsByIdAndDriverId(UUID id, UUID driverId);
+}

@@ -10,4 +10,3 @@ public class M3Application {
         SpringApplication.run(M3Application.class, args);
     }
 }
-

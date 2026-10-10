@@ -6,53 +6,44 @@ import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataDocumentRepos
 import ar.edu.utn.frre.m3.application.port.DocumentRepository;
 import ar.edu.utn.frre.m3.domain.Document;
 import ar.edu.utn.frre.m3.domain.DocumentType;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
-/**
- * Persistence adapter implementing the DocumentRepository application output port.
- */
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 @Repository
 public class DocumentPersistenceAdapter implements DocumentRepository {
 
-    private final SpringDataDocumentRepository springDataRepository;
-    private final DocumentMapper documentMapper;
+    private final SpringDataDocumentRepository repository;
+    private final DocumentMapper mapper;
 
-    public DocumentPersistenceAdapter(
-        SpringDataDocumentRepository springDataRepository,
-        DocumentMapper documentMapper
-    ) {
-        this.springDataRepository = Objects.requireNonNull(springDataRepository, "springDataRepository cannot be null");
-        this.documentMapper = Objects.requireNonNull(documentMapper, "documentMapper cannot be null");
+    public DocumentPersistenceAdapter(SpringDataDocumentRepository repository, DocumentMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
     }
 
     @Override
     public Document save(Document document) {
-        DocumentJpaEntity entity = documentMapper.toJpaEntity(document);
-        DocumentJpaEntity saved = springDataRepository.save(entity);
-        return documentMapper.toDomain(saved);
-    }
-
-    @Override
-    public Optional<Document> findCurrentByVehicleIdAndType(UUID vehicleId, DocumentType documentType) {
-        return springDataRepository.findByVehicleIdAndDocumentTypeAndCurrentTrue(vehicleId, documentType)
-            .map(documentMapper::toDomain);
-    }
-
-    @Override
-    public List<Document> findByVehicleIdOrderByRevisionDesc(UUID vehicleId) {
-        return springDataRepository.findByVehicleIdOrderByRevisionDesc(vehicleId).stream()
-            .map(documentMapper::toDomain)
-            .toList();
+        DocumentJpaEntity entity = mapper.toJpaEntity(document);
+        return mapper.toDomain(repository.save(entity));
     }
 
     @Override
     public Optional<Document> findById(UUID id) {
-        return springDataRepository.findById(id)
-            .map(documentMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<Document> findCurrentByVehicleIdAndType(UUID vehicleId, DocumentType documentType) {
+        return repository.findByVehicleIdAndDocumentTypeAndCurrentTrue(vehicleId, documentType)
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Document> findByVehicleIdOrderByRevisionDesc(UUID vehicleId) {
+        return repository.findByVehicleIdOrderByRevisionDesc(vehicleId).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }
-
