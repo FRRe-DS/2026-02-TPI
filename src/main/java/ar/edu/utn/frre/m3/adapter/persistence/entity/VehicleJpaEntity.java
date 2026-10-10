@@ -4,21 +4,24 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * JPA Entity mapping the 'vehicles' table.
+ */
 @Entity
 @Table(name = "vehicles")
 public class VehicleJpaEntity {
 
     @Id
+    @Column(name = "id", nullable = false)
     private UUID id;
 
     @Column(name = "driver_id", nullable = false)
     private UUID driverId;
 
-    @Column(name = "vehicle_type", nullable = false, length = 20)
+    @Column(name = "vehicle_type")
     private String vehicleType;
 
     @Column(name = "service_types", length = 50)
@@ -27,37 +30,72 @@ public class VehicleJpaEntity {
     @Column(name = "country_code", length = 2)
     private String countryCode;
 
-    @Column(name = "plate", nullable = false, length = 16)
+    @Column(name = "plate")
     private String plate;
 
-    @Column(name = "make", nullable = false, length = 60)
+    @Column(name = "make")
     private String make;
 
-    @Column(name = "model", nullable = false, length = 60)
+    @Column(name = "model")
     private String model;
 
-    @Column(name = "model_year", nullable = false)
+    @Column(name = "model_year")
     private Integer modelYear;
 
-    @Column(name = "qualification_status", nullable = false, length = 20)
+    @Column(name = "qualification_status")
     private String qualificationStatus;
 
-    @Column(name = "version", nullable = false)
-    private Long version;
+    @Column(name = "driver_version")
+    private Long driverVersion;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private Instant updatedAt;
 
     public VehicleJpaEntity() {
     }
 
-    public VehicleJpaEntity(UUID id, UUID driverId, String vehicleType, String serviceTypes,
-                            String countryCode, String plate, String make, String model,
-                            Integer modelYear, String qualificationStatus, Long version,
-                            Instant createdAt, Instant updatedAt) {
+    public VehicleJpaEntity(
+        UUID id,
+        UUID driverId,
+        String vehicleType,
+        String plate,
+        String make,
+        String model,
+        Integer modelYear,
+        String qualificationStatus,
+        Long driverVersion,
+        Instant createdAt
+    ) {
+        this.id = id;
+        this.driverId = driverId;
+        this.vehicleType = vehicleType;
+        this.plate = plate;
+        this.make = make;
+        this.model = model;
+        this.modelYear = modelYear;
+        this.qualificationStatus = qualificationStatus;
+        this.driverVersion = driverVersion;
+        this.createdAt = createdAt;
+    }
+
+    public VehicleJpaEntity(
+        UUID id,
+        UUID driverId,
+        String vehicleType,
+        String serviceTypes,
+        String countryCode,
+        String plate,
+        String make,
+        String model,
+        Integer modelYear,
+        String qualificationStatus,
+        Long driverVersion,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
         this.id = id;
         this.driverId = driverId;
         this.vehicleType = vehicleType;
@@ -68,7 +106,7 @@ public class VehicleJpaEntity {
         this.model = model;
         this.modelYear = modelYear;
         this.qualificationStatus = qualificationStatus;
-        this.version = version;
+        this.driverVersion = driverVersion;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -153,12 +191,20 @@ public class VehicleJpaEntity {
         this.qualificationStatus = qualificationStatus;
     }
 
+    public Long getDriverVersion() {
+        return driverVersion;
+    }
+
+    public void setDriverVersion(Long driverVersion) {
+        this.driverVersion = driverVersion;
+    }
+
     public Long getVersion() {
-        return version;
+        return driverVersion;
     }
 
     public void setVersion(Long version) {
-        this.version = version;
+        this.driverVersion = version;
     }
 
     public Instant getCreatedAt() {
