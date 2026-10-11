@@ -1,0 +1,49 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: m3-postgres
+    environment:
+      POSTGRES_DB: m3_db
+      POSTGRES_USER: m3_user
+      POSTGRES_PASSWORD: m3_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - m3_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U m3_user -d m3_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  m3-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: m3-app
+    ports:
+      - "3003:3003"
+    environment:
+      SERVER_PORT: 3003
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/m3_db
+      SPRING_DATASOURCE_USERNAME: m3_user
+      SPRING_DATASOURCE_PASSWORD: m3_pass
+      SPRING_PROFILES_ACTIVE: docker
+      # M1 / Keycloak — fill in per environment
+      OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:8080/realms/m3}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-m3-api}
+      # Integration URLs
+      M4_BASE_URL: ${M4_BASE_URL:-http://localhost:4004}
+      M6_BASE_URL: ${M6_BASE_URL:-http://localhost:6006}
+      INTEGRATION_MODE: ${INTEGRATION_MODE:-stub}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  m3_postgres_data:
+    driver: local

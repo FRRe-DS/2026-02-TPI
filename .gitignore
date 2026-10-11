@@ -1,0 +1,35 @@
+# Documentación y consignas locales del alumno
+tpi_hu_arquitectura/
+
+# Artefactos de compilación Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Variables de entorno y secretos
+.env
+.env.local
+*.env
+
+# IDEs y Editores
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+.classpath
+.project
+.settings/
+.nb-gradle/
+.nbproject/
+
+# Logs
+*.log
+
+# Archivos de Sistema Operativo
+.DS_Store
+Thumbs.db
+
+# Temporales
+*.tmp
+*.bak
+*~
+*.swp
