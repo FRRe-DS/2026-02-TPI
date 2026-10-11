@@ -7,40 +7,38 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entidad pura de Dominio para Conductor (Driver).
- * Representa el agregado raíz de conductor según la arquitectura hexagonal de M3.
- * Libre de dependencias de Spring, JPA o frameworks de infraestructura.
+ * Agregado raíz que representa al Conductor en el dominio de M3.
+ * Es una entidad pura sin dependencias de infraestructura ni frameworks.
+ * RNF-08: Maneja versión para control de concurrencia optimista / ETag.
  */
 public class Driver {
 
     private final UUID id;
     private final String identitySubject;
     private String displayName;
+    private PersonalInfo personalInfo;
     private QualificationStatus qualificationStatus;
     private String qualificationReason;
-    private PersonalInfo personalInfo;
     private int version;
     private final Instant createdAt;
     private Instant updatedAt;
 
     /**
-     * Constructor de dominio para registrar un nuevo conductor (HU-01).
-     * Inicia con estado PENDING, versión 1 y marcas de tiempo actuales.
+     * Constructor de creación rápida de perfil para HU-01 (RNF-08: inicia en versión 1).
      */
     public Driver(String identitySubject, String name) {
-        this(
-                UUID.randomUUID(),
-                validateIdentitySubject(identitySubject),
-                validateName(name),
-                QualificationStatus.PENDING,
-                1,
-                Instant.now(),
-                Instant.now()
-        );
+        this.id = UUID.randomUUID();
+        this.identitySubject = validateIdentitySubject(identitySubject);
+        this.displayName = validateName(name);
+        this.qualificationStatus = QualificationStatus.PENDING;
+        this.qualificationReason = "Perfil creado pendiente de validación";
+        this.version = 1;
+        this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
     }
 
     /**
-     * Constructor para creación inicial con información personal (HU-02).
+     * Constructor con PersonalInfo para HU-02.
      */
     public Driver(UUID id, String identitySubject, PersonalInfo personalInfo, Instant now) {
         this(
@@ -99,6 +97,12 @@ public class Driver {
         this.updatedAt = updatedAt != null ? updatedAt : Instant.now();
     }
 
+    public Driver(UUID id, String identitySubject, String name,
+                  QualificationStatus qualificationStatus, int version,
+                  Instant createdAt, Instant updatedAt) {
+        this(id, identitySubject, name, qualificationStatus, (long) version, createdAt, updatedAt);
+    }
+
     private static String validateIdentitySubject(String identitySubject) {
         if (identitySubject == null || identitySubject.trim().isEmpty()) {
             throw new IllegalArgumentException("identity_subject no puede ser nulo ni vacío");
@@ -149,23 +153,16 @@ public class Driver {
         return qualificationReason;
     }
 
-    public QualificationInfo getQualification() {
-        return new QualificationInfo(getStatus(), qualificationReason);
+    public PersonalInfo getPersonalInfo() {
+        return personalInfo;
     }
 
-    public PersonalInfo getPersonalInfo() {
-        if (personalInfo != null) {
-            return personalInfo;
-        }
-        String full = getDisplayName();
-        String first = full.contains(" ") ? full.substring(0, full.indexOf(' ')) : full;
-        String last = full.contains(" ") ? full.substring(full.indexOf(' ') + 1) : "";
-        if (first.isBlank()) first = "Conductor";
-        if (last.isBlank()) last = "Registrado";
-        String email = identitySubject != null && identitySubject.contains("@")
-                ? identitySubject
-                : "driver-" + (id != null ? id.toString().substring(0, 8) : "default") + "@clonuber.com";
-        return new PersonalInfo(first, last, "00000000", null, null, null, email);
+    public QualificationInfo getQualification() {
+        return new QualificationInfo(
+                DriverStatus.valueOf(qualificationStatus.name()),
+                qualificationReason != null ? qualificationReason : "Sin observaciones",
+                updatedAt
+        );
     }
 
     public int getVersion() {
@@ -248,8 +245,6 @@ public class Driver {
                 ", displayName='" + getDisplayName() + '\'' +
                 ", qualificationStatus=" + qualificationStatus +
                 ", version=" + version +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
                 '}';
     }
 }

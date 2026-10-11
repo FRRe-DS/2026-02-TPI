@@ -2,6 +2,21 @@
 
 Repositorio del módulo M3 del TPI Desarrollo de Software 2026.
 
+## Vista previa de todas las pantallas web
+
+Con la aplicación en ejecución, abrí `http://localhost:3003/ui`. La navegación incluye
+inicio, perfil, vehículos, documentación, habilitación, disponibilidad,
+valoraciones E2, listado de operadores y detalle de conductor. Las rutas están
+implementadas con Spring MVC y Thymeleaf; CSS y JavaScript se sirven localmente.
+
+La interfaz de estas rutas es una **vista previa con datos de ejemplo**, indicados
+en cada pantalla. Los formularios sin caso de uso integrado están deshabilitados:
+no simulan guardados ni decisiones reales. La pantalla existente para registrar
+licencias de un conductor real continúa en `/ui/drivers/{driverId}/documents`.
+El perfil de prueba puede ejecutarse con
+`sh mvnw -Dspring-boot.run.profiles=test -Dspring-boot.run.arguments=--server.port=3003 spring-boot:run`;
+usa H2 efímera y no requiere PostgreSQL para recorrer la vista previa.
+
 ## HU-05: documentación del conductor
 
 La licencia se registra en `POST /api/v1/drivers/{driverId}/documents` o desde
