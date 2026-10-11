@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Registrar vehículo</title><link rel="stylesheet" th:href="@{/hu03.css}"></head>
+<body><main class="card wide"><p class="eyebrow">HU-03 · <span th:text="${typeLabel}">Auto</span></p><h1>Datos del vehículo</h1>
+  <form th:action="@{/registro/guardar}" th:object="${form}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="type" th:value="${type}">
+    <div class="error" th:if="${#fields.hasGlobalErrors()}" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+    <div class="fields">
+      <label>Marca<input th:field="*{brand}" maxlength="60" required><small class="error" th:errors="*{brand}"></small></label>
+      <label>Modelo<input th:field="*{model}" maxlength="60" required><small class="error" th:errors="*{model}"></small></label>
+      <label>Año<input th:field="*{year}" type="number" min="1886" max="2100" required><small class="error" th:errors="*{year}"></small></label>
+      <label>Patente<input th:field="*{plate}" maxlength="20" required><small class="error" th:errors="*{plate}"></small></label>
+    </div>
+    <h2>Documentación</h2><p class="hint">Se aceptan PDF, PNG, JPG/JPEG, GIF y WEBP.</p>
+    <div class="documents">
+      <label>Seguro vehicular<input type="file" name="insurance" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" required><small>Seleccionado: <span data-file-name>ningún archivo</span></small></label>
+      <label>Cédula del vehículo<input type="file" name="registration" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" required><small>Seleccionado: <span data-file-name>ningún archivo</span></small></label>
+      <label>Licencia de conducir<input type="file" name="license" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" required><small>Seleccionado: <span data-file-name>ningún archivo</span></small></label>
+    </div>
+    <p class="hint error">Debe completar todos los campos obligatorios y adjuntar la documentación requerida.</p>
+    <button class="primary" type="submit">Finalizar</button>
+  </form>
+</main><script th:src="@{/hu03.js}" defer></script></body>
+</html>
