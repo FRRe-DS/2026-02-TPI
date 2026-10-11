@@ -26,13 +26,14 @@ public class DocumentMapper {
                 entity.getRejectionReason(),
                 entity.getReviewedAt(),
                 entity.getReviewedBy(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getServiceTypes()
         );
     }
 
     public DocumentJpaEntity toJpaEntity(Document domain) {
         if (domain == null) return null;
-        return new DocumentJpaEntity(
+        DocumentJpaEntity entity = new DocumentJpaEntity(
                 domain.getId(),
                 domain.getDriverId(),
                 domain.getVehicleId(),
@@ -51,5 +52,7 @@ public class DocumentMapper {
                 domain.getReviewedBy(),
                 domain.getCreatedAt()
         );
+        entity.setServiceTypes(domain.getServiceTypes());
+        return entity;
     }
 }

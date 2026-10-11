@@ -2,9 +2,12 @@ package ar.edu.utn.frre.m3.adapter.persistence.entity;
 
 import ar.edu.utn.frre.m3.domain.DocumentStatus;
 import ar.edu.utn.frre.m3.domain.DocumentType;
+import ar.edu.utn.frre.m3.domain.ServiceType;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "documents")
@@ -37,6 +40,12 @@ public class DocumentJpaEntity {
 
     @Column(name = "storage_reference", length = 200)
     private String storageReference;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "document_service_types", joinColumns = @JoinColumn(name = "document_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_type", nullable = false, length = 10)
+    private Set<ServiceType> serviceTypes = new HashSet<>();
 
     @Column(name = "revision", nullable = false)
     private int revision;
@@ -108,6 +117,8 @@ public class DocumentJpaEntity {
     public void setValidUntil(Instant validUntil) { this.validUntil = validUntil; }
     public String getStorageReference() { return storageReference; }
     public void setStorageReference(String storageReference) { this.storageReference = storageReference; }
+    public Set<ServiceType> getServiceTypes() { return serviceTypes; }
+    public void setServiceTypes(Set<ServiceType> serviceTypes) { this.serviceTypes = new HashSet<>(serviceTypes); }
     public int getRevision() { return revision; }
     public void setRevision(int revision) { this.revision = revision; }
     public DocumentStatus getStatus() { return status; }

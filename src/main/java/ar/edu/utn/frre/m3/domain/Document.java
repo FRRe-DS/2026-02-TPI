@@ -4,6 +4,7 @@ import ar.edu.utn.frre.m3.domain.exception.DomainValidationException;
 import ar.edu.utn.frre.m3.domain.exception.InvalidDocumentPeriodException;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public class Document {
@@ -16,6 +17,7 @@ public class Document {
     private final Instant issuedAt;
     private final Instant validUntil;
     private final String storageReference;
+    private final Set<ServiceType> serviceTypes;
     private final int revision;
     private DocumentStatus status;
     private boolean isCurrent;
@@ -31,6 +33,17 @@ public class Document {
                     DocumentStatus status, boolean isCurrent, Long driverVersion,
                     String rejectionReason, Instant reviewedAt, String reviewedBy,
                     Instant createdAt) {
+        this(id, driverId, vehicleId, documentType, documentNumber, issuingEntity, issuedAt,
+                validUntil, storageReference, revision, status, isCurrent, driverVersion,
+                rejectionReason, reviewedAt, reviewedBy, createdAt, Set.of());
+    }
+
+    public Document(UUID id, UUID driverId, UUID vehicleId, DocumentType documentType,
+                    String documentNumber, String issuingEntity, Instant issuedAt,
+                    Instant validUntil, String storageReference, int revision,
+                    DocumentStatus status, boolean isCurrent, Long driverVersion,
+                    String rejectionReason, Instant reviewedAt, String reviewedBy,
+                    Instant createdAt, Set<ServiceType> serviceTypes) {
         this.id = Objects.requireNonNull(id, "document id cannot be null");
         this.driverId = Objects.requireNonNull(driverId, "driver id cannot be null");
         this.vehicleId = vehicleId;
@@ -40,6 +53,7 @@ public class Document {
         this.issuedAt = Objects.requireNonNull(issuedAt, "issuedAt cannot be null");
         this.validUntil = Objects.requireNonNull(validUntil, "validUntil cannot be null");
         this.storageReference = storageReference;
+        this.serviceTypes = Set.copyOf(Objects.requireNonNull(serviceTypes, "serviceTypes cannot be null"));
         this.revision = Math.max(revision, 1);
         this.status = status != null ? status : DocumentStatus.PENDING;
         this.isCurrent = isCurrent;
@@ -64,6 +78,22 @@ public class Document {
                 issuingEntity, issuedAt, validUntil, storageReference, revision,
                 DocumentStatus.PENDING, true, 1L, null, null, null, Instant.now()
         );
+    }
+
+    public static Document createPendingLicense(UUID driverId, String documentNumber,
+                                                Instant issuedAt, Instant validUntil,
+                                                Set<ServiceType> serviceTypes,
+                                                String storageReference, int revision,
+                                                long driverVersion) {
+        if (serviceTypes == null || serviceTypes.isEmpty()) {
+            throw new DomainValidationException("License must allow at least one service type");
+        }
+        if (documentNumber == null || documentNumber.isBlank() || documentNumber.length() > 80) {
+            throw new DomainValidationException("License number must be between 1 and 80 characters");
+        }
+        return new Document(UUID.randomUUID(), driverId, null, DocumentType.LICENSE,
+                documentNumber.trim(), null, issuedAt, validUntil, storageReference, revision,
+                DocumentStatus.PENDING, true, driverVersion, null, null, null, Instant.now(), serviceTypes);
     }
 
     public void review(ReviewDecision decision, String reason, String actor, long newDriverVersion) {
@@ -94,6 +124,7 @@ public class Document {
     public Instant getIssuedAt() { return issuedAt; }
     public Instant getValidUntil() { return validUntil; }
     public String getStorageReference() { return storageReference; }
+    public Set<ServiceType> getServiceTypes() { return serviceTypes; }
     public int getRevision() { return revision; }
     public DocumentStatus getStatus() { return status; }
     public boolean isCurrent() { return isCurrent; }

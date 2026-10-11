@@ -11,4 +11,6 @@ public interface DocumentRepository {
     Optional<Document> findById(UUID id);
     Optional<Document> findCurrentByVehicleIdAndType(UUID vehicleId, DocumentType documentType);
     List<Document> findByVehicleIdOrderByRevisionDesc(UUID vehicleId);
+    Optional<Document> findCurrentLicenseByDriverId(UUID driverId);
+    List<Document> findLicensesByDriverId(UUID driverId);
 }

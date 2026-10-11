@@ -26,7 +26,9 @@ public class DocumentPersistenceAdapter implements DocumentRepository {
     @Override
     public Document save(Document document) {
         DocumentJpaEntity entity = mapper.toJpaEntity(document);
-        return mapper.toDomain(repository.save(entity));
+        // Flush the old current revision before inserting its replacement: PostgreSQL
+        // checks the partial unique index at each statement, not at transaction commit.
+        return mapper.toDomain(repository.saveAndFlush(entity));
     }
 
     @Override
@@ -45,5 +47,17 @@ public class DocumentPersistenceAdapter implements DocumentRepository {
         return repository.findByVehicleIdOrderByRevisionDesc(vehicleId).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Optional<Document> findCurrentLicenseByDriverId(UUID driverId) {
+        return repository.findByDriverIdAndDocumentTypeAndVehicleIdIsNullAndCurrentTrue(driverId, DocumentType.LICENSE)
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Document> findLicensesByDriverId(UUID driverId) {
+        return repository.findByDriverIdAndDocumentTypeAndVehicleIdIsNullOrderByRevisionDesc(driverId, DocumentType.LICENSE)
+                .stream().map(mapper::toDomain).toList();
     }
 }
