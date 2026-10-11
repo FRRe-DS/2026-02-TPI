@@ -10,4 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SpringDataVehicleRepository extends JpaRepository<VehicleJpaEntity, UUID> {
 
     boolean existsByIdAndDriverId(UUID id, UUID driverId);
+
+    java.util.List<VehicleJpaEntity> findByDriverId(UUID driverId);
 }
