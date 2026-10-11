@@ -23,6 +23,7 @@ target/
 /nbbuild/
 /dist/
 /nbdist/
+/.built-jar-stamps
 /.nb-gradle/
 build/
 !**/src/main/**/build/
@@ -30,6 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Logs & Temp ###
+*.log
+*.tmp
+*.swp
+*~
+.env
 
 ### OS files ###
 .DS_Store
