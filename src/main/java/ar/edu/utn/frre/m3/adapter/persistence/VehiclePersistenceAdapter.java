@@ -4,11 +4,14 @@ import ar.edu.utn.frre.m3.adapter.persistence.mapper.VehicleMapper;
 import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataVehicleRepository;
 import ar.edu.utn.frre.m3.application.port.VehicleRepository;
 import ar.edu.utn.frre.m3.domain.Vehicle;
-import org.springframework.stereotype.Repository;
-
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.stereotype.Repository;
 
+/**
+ * Adaptador de persistencia que implementa el puerto VehicleRepository.
+ */
 @Repository
 public class VehiclePersistenceAdapter implements VehicleRepository {
 
@@ -28,5 +31,19 @@ public class VehiclePersistenceAdapter implements VehicleRepository {
     @Override
     public boolean existsByIdAndDriverId(UUID vehicleId, UUID driverId) {
         return repository.existsByIdAndDriverId(vehicleId, driverId);
+    }
+
+    @Override
+    public List<Vehicle> findByDriverId(UUID driverId) {
+        return repository.findByDriverIdOrderByCreatedAtDesc(driverId)
+            .stream()
+            .map(mapper::toDomain)
+            .toList();
+    }
+
+    @Override
+    public Optional<Vehicle> findByIdAndDriverId(UUID vehicleId, UUID driverId) {
+        return repository.findByIdAndDriverId(vehicleId, driverId)
+            .map(mapper::toDomain);
     }
 }
