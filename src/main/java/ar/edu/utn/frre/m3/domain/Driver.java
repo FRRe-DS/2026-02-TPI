@@ -1,5 +1,6 @@
 package ar.edu.utn.frre.m3.domain;
 
+import ar.edu.utn.frre.m3.domain.exception.VersionMismatchException;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -54,6 +55,12 @@ public class Driver {
         this.updatedAt = Objects.requireNonNull(updatedAt, "La fecha de actualización no puede ser nula");
     }
 
+    public Driver(UUID id, String identitySubject, String name,
+                  QualificationStatus qualificationStatus, long version,
+                  Instant createdAt, Instant updatedAt) {
+        this(id, identitySubject, name, qualificationStatus, Math.toIntExact(version), createdAt, updatedAt);
+    }
+
     private static String validateIdentitySubject(String identitySubject) {
         if (identitySubject == null || identitySubject.trim().isEmpty()) {
             throw new IllegalArgumentException("identity_subject no puede ser nulo ni vacío");
@@ -77,6 +84,10 @@ public class Driver {
     }
 
     public String getName() {
+        return name;
+    }
+
+    public String getDisplayName() {
         return name;
     }
 
@@ -109,6 +120,12 @@ public class Driver {
     public void incrementVersion() {
         this.version++;
         this.updatedAt = Instant.now();
+    }
+
+    public void validateVersion(long expectedVersion) {
+        if (version != expectedVersion) {
+            throw new VersionMismatchException(version, expectedVersion);
+        }
     }
 
     @Override

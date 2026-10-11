@@ -17,7 +17,7 @@ import java.util.UUID;
  * Manejador global de excepciones para la API REST según la sección 9.4
  * (RFC 9457 ProblemDetail).
  */
-@RestControllerAdvice(basePackages = "ar.edu.utn.frre.m3.adapter.rest")
+@RestControllerAdvice(assignableTypes = DriverRestController.class)
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(DriverAlreadyExistsException.class)

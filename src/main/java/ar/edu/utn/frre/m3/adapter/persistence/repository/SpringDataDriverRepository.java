@@ -12,6 +12,10 @@ import java.util.UUID;
 
 public interface SpringDataDriverRepository extends JpaRepository<DriverJpaEntity, UUID> {
 
+    Optional<DriverJpaEntity> findByIdentitySubject(String identitySubject);
+
+    boolean existsByIdentitySubject(String identitySubject);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d FROM DriverJpaEntity d WHERE d.id = :id")
     Optional<DriverJpaEntity> findByIdWithPessimisticLock(@Param("id") UUID id);

@@ -30,6 +30,16 @@ public class DriverPersistenceAdapter implements DriverRepository {
     }
 
     @Override
+    public Optional<Driver> findByIdentitySubject(String identitySubject) {
+        return repository.findByIdentitySubject(identitySubject).map(this::toDomain);
+    }
+
+    @Override
+    public boolean existsByIdentitySubject(String identitySubject) {
+        return repository.existsByIdentitySubject(identitySubject);
+    }
+
+    @Override
     public Driver save(Driver driver) {
         DriverJpaEntity entity = toEntity(driver);
         return toDomain(repository.save(entity));
@@ -53,7 +63,7 @@ public class DriverPersistenceAdapter implements DriverRepository {
                 domain.getIdentitySubject(),
                 domain.getDisplayName(),
                 domain.getQualificationStatus().name(),
-                domain.getVersion(),
+                (long) domain.getVersion(),
                 domain.getCreatedAt(),
                 domain.getUpdatedAt()
         );

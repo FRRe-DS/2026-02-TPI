@@ -12,6 +12,8 @@ public interface DriverRepository {
 
     Optional<Driver> findById(UUID id);
 
+    Optional<Driver> findByIdWithPessimisticLock(UUID id);
+
     Optional<Driver> findByIdentitySubject(String identitySubject);
 
     boolean existsByIdentitySubject(String identitySubject);
