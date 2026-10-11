@@ -32,7 +32,7 @@ public class UiPreviewController {
     @GetMapping("/ui/documents")
     public String documents(Model model) { return page(model, "documents", "Documentación"); }
 
-    @GetMapping("/ui/qualification")
+    @GetMapping("/ui/preview/qualification")
     public String qualification(Model model) { return page(model, "qualification", "Habilitación"); }
 
     @GetMapping("/ui/availability")

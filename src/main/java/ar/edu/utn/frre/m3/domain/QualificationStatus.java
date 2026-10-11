@@ -9,5 +9,9 @@ public enum QualificationStatus {
     APPROVED,
     OBSERVED,
     REJECTED,
-    SUSPENDED
+    SUSPENDED;
+
+    public boolean isApproved() {
+        return this == APPROVED;
+    }
 }
