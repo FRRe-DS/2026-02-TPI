@@ -1,51 +1,63 @@
 package ar.edu.utn.frre.m3.domain;
 
+import ar.edu.utn.frre.m3.domain.exception.VersionMismatchException;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entidad de Dominio Agregada: Conductor (Driver).
- * Representa al conductor dentro de M3, su identidad vinculada a M1 y su estado de habilitación.
- * Diseñada como clase pura de Java sin dependencias de frameworks (Spring, JPA).
+ * Entidad pura de Dominio para Conductor (Driver).
+ * Representa el agregado raíz de conductor según la arquitectura hexagonal de M3.
+ * Libre de dependencias de Spring, JPA o frameworks de infraestructura.
  */
 public class Driver {
+
     private final UUID id;
     private final String identitySubject;
+    private String displayName;
+    private QualificationStatus qualificationStatus;
+    private String qualificationReason;
     private PersonalInfo personalInfo;
-    private QualificationInfo qualification;
     private int version;
     private final Instant createdAt;
     private Instant updatedAt;
 
     /**
-     * Constructor para creación de un nuevo conductor (registro inicial).
+     * Constructor de dominio para registrar un nuevo conductor (HU-01).
+     * Inicia con estado PENDING, versión 1 y marcas de tiempo actuales.
      */
-    public Driver(UUID id, String identitySubject, PersonalInfo personalInfo, Instant now) {
-        if (id == null) {
-            throw new IllegalArgumentException("El ID del conductor no puede ser nulo");
-        }
-        if (identitySubject == null || identitySubject.isBlank()) {
-            throw new IllegalArgumentException("El identitySubject (M1) no puede ser nulo ni estar vacío");
-        }
-        if (personalInfo == null) {
-            throw new IllegalArgumentException("La información personal no puede ser nula");
-        }
-        if (now == null) {
-            throw new IllegalArgumentException("La fecha de creación no puede ser nula");
-        }
-
-        this.id = id;
-        this.identitySubject = identitySubject.trim();
-        this.personalInfo = personalInfo;
-        this.qualification = QualificationInfo.pending();
-        this.version = 1;
-        this.createdAt = now;
-        this.updatedAt = now;
+    public Driver(String identitySubject, String name) {
+        this(
+                UUID.randomUUID(),
+                validateIdentitySubject(identitySubject),
+                validateName(name),
+                QualificationStatus.PENDING,
+                1,
+                Instant.now(),
+                Instant.now()
+        );
     }
 
     /**
-     * Constructor completo para reconstrucción desde persistencia.
+     * Constructor para creación inicial con información personal (HU-02).
+     */
+    public Driver(UUID id, String identitySubject, PersonalInfo personalInfo, Instant now) {
+        this(
+                id,
+                identitySubject,
+                personalInfo != null ? personalInfo.getFullName() : "Conductor",
+                QualificationStatus.PENDING,
+                1,
+                now != null ? now : Instant.now(),
+                now != null ? now : Instant.now()
+        );
+        this.personalInfo = personalInfo;
+        this.qualificationReason = "Perfil registrado, pendiente de revisión administrativa";
+    }
+
+    /**
+     * Constructor completo desde persistencia o seeds de prueba con PersonalInfo (HU-02).
      */
     public Driver(UUID id,
                   String identitySubject,
@@ -55,12 +67,50 @@ public class Driver {
                   Instant createdAt,
                   Instant updatedAt) {
         this.id = Objects.requireNonNull(id, "id es requerido");
-        this.identitySubject = Objects.requireNonNull(identitySubject, "identitySubject es requerido");
-        this.personalInfo = Objects.requireNonNull(personalInfo, "personalInfo es requerido");
-        this.qualification = Objects.requireNonNull(qualification, "qualification es requerido");
-        this.version = version;
+        this.identitySubject = validateIdentitySubject(identitySubject);
+        this.personalInfo = personalInfo;
+        this.displayName = personalInfo != null ? personalInfo.getFullName() : "Conductor";
+        this.qualificationStatus = qualification != null && qualification.getStatus() != null
+                ? QualificationStatus.valueOf(qualification.getStatus().name())
+                : QualificationStatus.PENDING;
+        this.qualificationReason = qualification != null ? qualification.getReason() : null;
+        this.version = version > 0 ? version : 1;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt es requerido");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt es requerido");
+    }
+
+    /**
+     * Constructor estándar para reconstrucción desde persistencia.
+     */
+    public Driver(
+            UUID id,
+            String identitySubject,
+            String displayName,
+            QualificationStatus qualificationStatus,
+            long version,
+            Instant createdAt,
+            Instant updatedAt) {
+        this.id = Objects.requireNonNull(id, "El id no puede ser nulo");
+        this.identitySubject = validateIdentitySubject(identitySubject);
+        this.displayName = validateName(displayName);
+        this.qualificationStatus = qualificationStatus != null ? qualificationStatus : QualificationStatus.PENDING;
+        this.version = version > 0 ? (int) version : 1;
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
+        this.updatedAt = updatedAt != null ? updatedAt : Instant.now();
+    }
+
+    private static String validateIdentitySubject(String identitySubject) {
+        if (identitySubject == null || identitySubject.trim().isEmpty()) {
+            throw new IllegalArgumentException("identity_subject no puede ser nulo ni vacío");
+        }
+        return identitySubject.trim();
+    }
+
+    private static String validateName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre no puede ser nulo ni vacío");
+        }
+        return name.trim();
     }
 
     public UUID getId() {
@@ -71,20 +121,51 @@ public class Driver {
         return identitySubject;
     }
 
-    public PersonalInfo getPersonalInfo() {
-        return personalInfo;
+    public String getDisplayName() {
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
+        if (personalInfo != null) {
+            return personalInfo.getFullName();
+        }
+        return "";
     }
 
-    public QualificationInfo getQualification() {
-        return qualification;
+    public String getName() {
+        return getDisplayName();
+    }
+
+    public QualificationStatus getQualificationStatus() {
+        return qualificationStatus;
     }
 
     public DriverStatus getStatus() {
-        return qualification.getStatus();
+        return qualificationStatus != null
+                ? DriverStatus.valueOf(qualificationStatus.name())
+                : DriverStatus.PENDING;
     }
 
     public String getQualificationReason() {
-        return qualification.getReason();
+        return qualificationReason;
+    }
+
+    public QualificationInfo getQualification() {
+        return new QualificationInfo(getStatus(), qualificationReason);
+    }
+
+    public PersonalInfo getPersonalInfo() {
+        if (personalInfo != null) {
+            return personalInfo;
+        }
+        String full = getDisplayName();
+        String first = full.contains(" ") ? full.substring(0, full.indexOf(' ')) : full;
+        String last = full.contains(" ") ? full.substring(full.indexOf(' ') + 1) : "";
+        if (first.isBlank()) first = "Conductor";
+        if (last.isBlank()) last = "Registrado";
+        String email = identitySubject != null && identitySubject.contains("@")
+                ? identitySubject
+                : "driver-" + (id != null ? id.toString().substring(0, 8) : "default") + "@clonuber.com";
+        return new PersonalInfo(first, last, "00000000", null, null, null, email);
     }
 
     public int getVersion() {
@@ -99,34 +180,50 @@ public class Driver {
         return updatedAt;
     }
 
-    /**
-     * Comprueba si el conductor es apto para operar.
-     */
     public boolean isOperable() {
-        return qualification.isOperable();
+        return qualificationStatus == QualificationStatus.APPROVED;
     }
 
-    /**
-     * Verifica si una identidad dada (subject de M1) coincide con el propietario del perfil.
-     */
     public boolean isOwnedBy(String subject) {
         return this.identitySubject != null && this.identitySubject.equals(subject);
     }
 
-    /**
-     * Actualiza la información personal del conductor incrementando la versión.
-     */
+    public void validateVersion(long expectedVersion) {
+        if (this.version != expectedVersion) {
+            throw new VersionMismatchException(this.version, expectedVersion);
+        }
+    }
+
+    public void incrementVersion() {
+        this.version++;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateName(String newName) {
+        this.displayName = validateName(newName);
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateDisplayName(String newDisplayName) {
+        updateName(newDisplayName);
+    }
+
+    public void changeQualificationStatus(QualificationStatus newStatus) {
+        this.qualificationStatus = Objects.requireNonNull(newStatus, "El nuevo estado no puede ser nulo");
+        this.updatedAt = Instant.now();
+    }
+
     public void updatePersonalInfo(PersonalInfo newInfo, Instant now) {
         this.personalInfo = Objects.requireNonNull(newInfo, "La nueva información personal no puede ser nula");
+        this.displayName = newInfo.getFullName();
         this.updatedAt = Objects.requireNonNull(now, "updatedAt es requerido");
         this.version++;
     }
 
-    /**
-     * Transiciona el estado de habilitación con su motivo correspondiente e incrementa la versión.
-     */
     public void updateQualification(QualificationInfo newQualification, Instant now) {
-        this.qualification = Objects.requireNonNull(newQualification, "newQualification es requerido");
+        Objects.requireNonNull(newQualification, "newQualification es requerido");
+        this.qualificationStatus = QualificationStatus.valueOf(newQualification.getStatus().name());
+        this.qualificationReason = newQualification.getReason();
         this.updatedAt = Objects.requireNonNull(now, "updatedAt es requerido");
         this.version++;
     }
@@ -134,8 +231,7 @@ public class Driver {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Driver driver = (Driver) o;
+        if (!(o instanceof Driver driver)) return false;
         return Objects.equals(id, driver.id);
     }
 
@@ -149,9 +245,11 @@ public class Driver {
         return "Driver{" +
                 "id=" + id +
                 ", identitySubject='" + identitySubject + '\'' +
-                ", fullName='" + personalInfo.getFullName() + '\'' +
-                ", status=" + getStatus() +
+                ", displayName='" + getDisplayName() + '\'' +
+                ", qualificationStatus=" + qualificationStatus +
                 ", version=" + version +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 }

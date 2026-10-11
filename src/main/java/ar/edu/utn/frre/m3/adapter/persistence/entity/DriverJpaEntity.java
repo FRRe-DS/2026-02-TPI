@@ -1,35 +1,40 @@
-package ar.edu.utn.frre.m3.adapter.persistence;
+package ar.edu.utn.frre.m3.adapter.persistence.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/**
- * Entidad JPA para la persistencia del agregado Conductor en la tabla "drivers" de PostgreSQL.
- * Respeta la propiedad de datos de M3 establecida en RNF-05.
- */
 @Entity
-@Table(name = "drivers", indexes = {
-        @Index(name = "idx_drivers_identity_subject", columnList = "identity_subject", unique = true),
-        @Index(name = "idx_drivers_status", columnList = "status")
-})
+@Table(name = "drivers")
 public class DriverJpaEntity {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "identity_subject", nullable = false, unique = true, length = 128)
+    @Column(name = "identity_subject", unique = true, length = 128)
     private String identitySubject;
 
-    @Column(name = "first_name", nullable = false, length = 100)
+    @Column(name = "display_name", nullable = false, length = 100)
+    private String displayName;
+
+    @Column(name = "qualification_status", nullable = false, length = 20)
+    private String qualificationStatus;
+
+    @Column(name = "qualification_reason", length = 500)
+    private String qualificationReason;
+
+    @Column(name = "first_name", length = 100)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false, length = 100)
+    @Column(name = "last_name", length = 100)
     private String lastName;
 
-    @Column(name = "dni", nullable = false, length = 32)
+    @Column(name = "dni", length = 32)
     private String dni;
 
     @Column(name = "birth_date")
@@ -41,25 +46,31 @@ public class DriverJpaEntity {
     @Column(name = "phone", length = 50)
     private String phone;
 
-    @Column(name = "email", nullable = false, length = 150)
+    @Column(name = "email", length = 150)
     private String email;
 
-    @Column(name = "status", nullable = false, length = 32)
-    private String status;
-
-    @Column(name = "qualification_reason", length = 500)
-    private String qualificationReason;
-
     @Column(name = "version", nullable = false)
-    private int version;
+    private Long version;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     public DriverJpaEntity() {
+    }
+
+    public DriverJpaEntity(UUID id, String identitySubject, String displayName,
+                           String qualificationStatus, Long version,
+                           Instant createdAt, Instant updatedAt) {
+        this.id = id;
+        this.identitySubject = identitySubject;
+        this.displayName = displayName;
+        this.qualificationStatus = qualificationStatus;
+        this.version = version;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public UUID getId() {
@@ -76,6 +87,30 @@ public class DriverJpaEntity {
 
     public void setIdentitySubject(String identitySubject) {
         this.identitySubject = identitySubject;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getQualificationStatus() {
+        return qualificationStatus;
+    }
+
+    public void setQualificationStatus(String qualificationStatus) {
+        this.qualificationStatus = qualificationStatus;
+    }
+
+    public String getQualificationReason() {
+        return qualificationReason;
+    }
+
+    public void setQualificationReason(String qualificationReason) {
+        this.qualificationReason = qualificationReason;
     }
 
     public String getFirstName() {
@@ -134,27 +169,11 @@ public class DriverJpaEntity {
         this.email = email;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getQualificationReason() {
-        return qualificationReason;
-    }
-
-    public void setQualificationReason(String qualificationReason) {
-        this.qualificationReason = qualificationReason;
-    }
-
-    public int getVersion() {
+    public Long getVersion() {
         return version;
     }
 
-    public void setVersion(int version) {
+    public void setVersion(Long version) {
         this.version = version;
     }
 

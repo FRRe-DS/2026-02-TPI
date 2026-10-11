@@ -1,23 +1,10 @@
 package ar.edu.utn.frre.m3.application.port.out;
 
-import ar.edu.utn.frre.m3.domain.Driver;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import ar.edu.utn.frre.m3.application.port.DriverRepository;
 
 /**
- * Puerto de salida para persistencia de conductores.
- * Permite a la capa de aplicación interactuar con el almacenamiento sin conocer JPA o la base de datos subyacente.
+ * Puerto de salida para persistencia de conductores (HU-02).
+ * Especializa DriverRepository para la arquitectura de puertos y adaptadores.
  */
-public interface DriverRepositoryPort {
-
-    Optional<Driver> findById(UUID id);
-
-    Optional<Driver> findByIdentitySubject(String identitySubject);
-
-    Driver save(Driver driver);
-
-    boolean existsByIdentitySubject(String identitySubject);
-
-    List<Driver> findAll();
+public interface DriverRepositoryPort extends DriverRepository {
 }

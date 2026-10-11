@@ -1,8 +1,11 @@
 package ar.edu.utn.frre.m3.adapter.persistence;
 
+import ar.edu.utn.frre.m3.adapter.persistence.entity.DriverJpaEntity;
+import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataDriverRepository;
+import ar.edu.utn.frre.m3.application.port.DriverRepository;
 import ar.edu.utn.frre.m3.application.port.out.DriverRepositoryPort;
 import ar.edu.utn.frre.m3.domain.Driver;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -12,11 +15,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Adaptador de persistencia que implementa el puerto DriverRepositoryPort.
- * Encapsula el acceso a datos mediante Spring Data JPA y garantiza el aislamiento de la lógica de dominio.
+ * Adaptador de persistencia que implementa el puerto de repositorio para Driver.
+ * Conecta los casos de uso con Spring Data JPA y aísla el modelo de dominio.
  */
-@Component
-public class DriverPersistenceAdapter implements DriverRepositoryPort {
+@Repository
+public class DriverPersistenceAdapter implements DriverRepository, DriverRepositoryPort {
 
     private final SpringDataDriverRepository springDataRepository;
     private final DriverMapper driverMapper;
@@ -35,10 +38,23 @@ public class DriverPersistenceAdapter implements DriverRepositoryPort {
     }
 
     @Override
+    @Transactional
+    public Optional<Driver> findByIdWithPessimisticLock(UUID id) {
+        return springDataRepository.findByIdWithPessimisticLock(id)
+                .map(driverMapper::toDomain);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<Driver> findByIdentitySubject(String identitySubject) {
         return springDataRepository.findByIdentitySubject(identitySubject)
                 .map(driverMapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByIdentitySubject(String identitySubject) {
+        return springDataRepository.existsByIdentitySubject(identitySubject);
     }
 
     @Override
@@ -47,12 +63,6 @@ public class DriverPersistenceAdapter implements DriverRepositoryPort {
         DriverJpaEntity entity = driverMapper.toJpaEntity(driver);
         DriverJpaEntity savedEntity = springDataRepository.save(entity);
         return driverMapper.toDomain(savedEntity);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByIdentitySubject(String identitySubject) {
-        return springDataRepository.existsByIdentitySubject(identitySubject);
     }
 
     @Override
