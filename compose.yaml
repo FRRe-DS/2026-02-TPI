@@ -1,21 +1,54 @@
 services:
+  m3-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: clonuber/m3-drivers-vehicles:0.2.0
+    container_name: m3_drivers_vehicles
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      SERVER_PORT: 3003
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/m3_db
+      SPRING_DATASOURCE_USERNAME: m3_user
+      SPRING_DATASOURCE_PASSWORD: m3_password
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-m3-service}
+      OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:-m3-web-client}
+      OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-m3-web-secret}
+      INTEGRATION_MODE: ${INTEGRATION_MODE:-local}
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - m3_network
+
   postgres:
     image: postgres:16-alpine
-    container_name: m3-postgres
+    container_name: m3_postgres
     restart: unless-stopped
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: m3_db
       POSTGRES_USER: m3_user
-      POSTGRES_PASSWORD: m3_pass
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: m3_password
     volumes:
-      - m3_pgdata:/var/lib/postgresql/data
+      - m3_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U m3_user -d m3_db"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - m3_network
 
 volumes:
-  m3_pgdata:
+  m3_postgres_data:
+    name: m3_postgres_data
+
+networks:
+  m3_network:
+    name: m3_network

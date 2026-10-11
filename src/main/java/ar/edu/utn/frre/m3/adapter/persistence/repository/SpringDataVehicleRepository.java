@@ -7,11 +7,13 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Repositorio Spring Data JPA para la tabla vehicles.
+ * Spring Data JPA repository for VehicleJpaEntity.
  */
 public interface SpringDataVehicleRepository extends JpaRepository<VehicleJpaEntity, UUID> {
 
     List<VehicleJpaEntity> findByDriverIdOrderByCreatedAtDesc(UUID driverId);
 
     Optional<VehicleJpaEntity> findByIdAndDriverId(UUID id, UUID driverId);
+
+    boolean existsByIdAndDriverId(UUID id, UUID driverId);
 }

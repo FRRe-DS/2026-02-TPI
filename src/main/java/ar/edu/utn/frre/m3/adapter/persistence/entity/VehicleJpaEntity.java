@@ -1,20 +1,18 @@
 package ar.edu.utn.frre.m3.adapter.persistence.entity;
 
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
- * Entidad JPA que mapea la tabla 'vehicles' y su relación con 'vehicle_services'.
+ * JPA Entity mapping the 'vehicles' table.
  */
 @Entity
 @Table(name = "vehicles")
@@ -30,10 +28,8 @@ public class VehicleJpaEntity {
     @Column(name = "vehicle_type")
     private String vehicleType;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "vehicle_services", joinColumns = @JoinColumn(name = "vehicle_id"))
-    @Column(name = "service_type")
-    private Set<String> serviceTypes = new HashSet<>();
+    @Column(name = "service_types", length = 50)
+    private String serviceTypes;
 
     @Column(name = "country_code", length = 2)
     private String countryCode = "AR";
@@ -59,9 +55,43 @@ public class VehicleJpaEntity {
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
     public VehicleJpaEntity() {
     }
 
+    public VehicleJpaEntity(
+        UUID id,
+        UUID driverId,
+        String vehicleType,
+        String serviceTypes,
+        String countryCode,
+        String plate,
+        String make,
+        String model,
+        Integer modelYear,
+        String qualificationStatus,
+        Long driverVersion,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+        this.id = id;
+        this.driverId = driverId;
+        this.vehicleType = vehicleType;
+        this.serviceTypes = serviceTypes;
+        this.countryCode = countryCode != null ? countryCode : "AR";
+        this.plate = plate;
+        this.make = make;
+        this.model = model;
+        this.modelYear = modelYear;
+        this.qualificationStatus = qualificationStatus;
+        this.driverVersion = driverVersion;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    // Constructor compatible con Set<String> (HU-04)
     public VehicleJpaEntity(
         UUID id,
         UUID driverId,
@@ -76,18 +106,21 @@ public class VehicleJpaEntity {
         Long driverVersion,
         Instant createdAt
     ) {
-        this.id = id;
-        this.driverId = driverId;
-        this.vehicleType = vehicleType;
-        this.serviceTypes = serviceTypes != null ? serviceTypes : new HashSet<>();
-        this.countryCode = countryCode != null ? countryCode : "AR";
-        this.plate = plate;
-        this.make = make;
-        this.model = model;
-        this.modelYear = modelYear;
-        this.qualificationStatus = qualificationStatus;
-        this.driverVersion = driverVersion;
-        this.createdAt = createdAt;
+        this(
+            id,
+            driverId,
+            vehicleType,
+            serviceTypes != null ? String.join(",", serviceTypes) : null,
+            countryCode,
+            plate,
+            make,
+            model,
+            modelYear,
+            qualificationStatus,
+            driverVersion,
+            createdAt,
+            null
+        );
     }
 
     public UUID getId() { return id; }
@@ -99,8 +132,18 @@ public class VehicleJpaEntity {
     public String getVehicleType() { return vehicleType; }
     public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
 
-    public Set<String> getServiceTypes() { return serviceTypes; }
-    public void setServiceTypes(Set<String> serviceTypes) { this.serviceTypes = serviceTypes; }
+    public String getServiceTypes() { return serviceTypes; }
+    public void setServiceTypes(String serviceTypes) { this.serviceTypes = serviceTypes; }
+
+    public Set<String> getServiceTypesSet() {
+        if (serviceTypes == null || serviceTypes.isBlank()) {
+            return Collections.emptySet();
+        }
+        return Arrays.stream(serviceTypes.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
+    }
 
     public String getCountryCode() { return countryCode; }
     public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
@@ -123,6 +166,12 @@ public class VehicleJpaEntity {
     public Long getDriverVersion() { return driverVersion; }
     public void setDriverVersion(Long driverVersion) { this.driverVersion = driverVersion; }
 
+    public Long getVersion() { return driverVersion; }
+    public void setVersion(Long version) { this.driverVersion = version; }
+
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

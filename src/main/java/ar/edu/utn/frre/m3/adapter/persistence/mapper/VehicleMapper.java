@@ -18,7 +18,7 @@ public class VehicleMapper {
             entity.getId(),
             entity.getDriverId(),
             entity.getVehicleType(),
-            entity.getServiceTypes(),
+            entity.getServiceTypesSet(),
             entity.getCountryCode() != null ? entity.getCountryCode() : "AR",
             entity.getPlate(),
             entity.getMake(),

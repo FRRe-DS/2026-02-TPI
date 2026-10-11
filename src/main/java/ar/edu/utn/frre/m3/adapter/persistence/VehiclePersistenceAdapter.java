@@ -5,7 +5,6 @@ import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataVehicleReposi
 import ar.edu.utn.frre.m3.application.port.VehicleRepository;
 import ar.edu.utn.frre.m3.domain.Vehicle;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -16,34 +15,35 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class VehiclePersistenceAdapter implements VehicleRepository {
 
-    private final SpringDataVehicleRepository springDataVehicleRepository;
-    private final VehicleMapper vehicleMapper;
+    private final SpringDataVehicleRepository repository;
+    private final VehicleMapper mapper;
 
-    public VehiclePersistenceAdapter(
-        SpringDataVehicleRepository springDataVehicleRepository,
-        VehicleMapper vehicleMapper
-    ) {
-        this.springDataVehicleRepository = Objects.requireNonNull(springDataVehicleRepository, "springDataVehicleRepository cannot be null");
-        this.vehicleMapper = Objects.requireNonNull(vehicleMapper, "vehicleMapper cannot be null");
+    public VehiclePersistenceAdapter(SpringDataVehicleRepository repository, VehicleMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
     }
 
     @Override
     public Optional<Vehicle> findById(UUID vehicleId) {
-        return springDataVehicleRepository.findById(vehicleId)
-            .map(vehicleMapper::toDomain);
+        return repository.findById(vehicleId).map(mapper::toDomain);
+    }
+
+    @Override
+    public boolean existsByIdAndDriverId(UUID vehicleId, UUID driverId) {
+        return repository.existsByIdAndDriverId(vehicleId, driverId);
     }
 
     @Override
     public List<Vehicle> findByDriverId(UUID driverId) {
-        return springDataVehicleRepository.findByDriverIdOrderByCreatedAtDesc(driverId)
+        return repository.findByDriverIdOrderByCreatedAtDesc(driverId)
             .stream()
-            .map(vehicleMapper::toDomain)
+            .map(mapper::toDomain)
             .toList();
     }
 
     @Override
     public Optional<Vehicle> findByIdAndDriverId(UUID vehicleId, UUID driverId) {
-        return springDataVehicleRepository.findByIdAndDriverId(vehicleId, driverId)
-            .map(vehicleMapper::toDomain);
+        return repository.findByIdAndDriverId(vehicleId, driverId)
+            .map(mapper::toDomain);
     }
 }

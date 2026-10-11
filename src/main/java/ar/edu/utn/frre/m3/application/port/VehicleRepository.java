@@ -15,4 +15,6 @@ public interface VehicleRepository {
     List<Vehicle> findByDriverId(UUID driverId);
 
     Optional<Vehicle> findByIdAndDriverId(UUID vehicleId, UUID driverId);
+
+    boolean existsByIdAndDriverId(UUID vehicleId, UUID driverId);
 }
