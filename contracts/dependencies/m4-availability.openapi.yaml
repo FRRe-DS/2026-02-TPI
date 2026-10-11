@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: M4 — Disponibilidad y Despacho (Propuesta de Interfaz)
+  version: 0.1.0
+paths:
+  /api/v1/drivers/{driverId}/availability-intent:
+    put:
+      summary: Notificar intención de disponibilidad desde M3
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connected:
+                  type: boolean
+                available:
+                  type: boolean
+                vehicleId:
+                  type: string
+                  format: uuid
+                desiredVersion:
+                  type: integer
+      responses:
+        '200':
+          description: Intención aceptada

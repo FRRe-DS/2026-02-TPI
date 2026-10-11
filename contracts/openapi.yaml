@@ -1,0 +1,242 @@
+openapi: 3.0.3
+info:
+  title: M3 — Conductores y Vehículos API
+  description: Contrato OpenAPI del microservicio M3 para el sistema Clon de Uber (TPI Desarrollo de Software 2026).
+  version: 0.2.0
+servers:
+  - url: http://localhost:3003
+    description: Servidor local / desarrollo
+
+paths:
+  /health/live:
+    get:
+      summary: Liveness check
+      description: Comprueba que el proceso de M3 está vivo.
+      responses:
+        '200':
+          description: Servicio vivo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+
+  /health/ready:
+    get:
+      summary: Readiness check
+      description: Comprueba que M3 y sus dependencias requeridas (PostgreSQL) están listos.
+      responses:
+        '200':
+          description: Servicio listo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+        '503':
+          description: Servicio no disponible
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/v1/me/driver:
+    get:
+      summary: Consultar mi perfil de conductor (HU-02)
+      description: Obtiene el perfil y estado actual del conductor autenticado en base a su identidad en M1 (Keycloak subject).
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Perfil del conductor obtenido con éxito.
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Versión de concurrencia del registro (e.g., "1").
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverProfileResponse'
+        '401':
+          description: No autenticado / token ausente o inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: No se encontró perfil de conductor registrado para la identidad autenticada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/v1/drivers/{driverId}:
+    get:
+      summary: Consultar perfil de conductor por ID (HU-02)
+      description: Obtiene los datos y estado del conductor identificado por driverId. Permitido al propio conductor o a un operador.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          description: Identificador UUID del conductor en M3.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Perfil del conductor obtenido con éxito.
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Versión de concurrencia del registro (e.g., "1").
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverProfileResponse'
+        '401':
+          description: No autenticado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Acceso denegado (no es propietario ni operador).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Conductor no encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DriverStatus:
+      type: string
+      enum:
+        - PENDING
+        - APPROVED
+        - OBSERVED
+        - REJECTED
+        - SUSPENDED
+      description: Estado de habilitación del conductor.
+
+    PersonalInfoResponse:
+      type: object
+      properties:
+        firstName:
+          type: string
+          example: Juan
+        lastName:
+          type: string
+          example: Pérez
+        dni:
+          type: string
+          example: "35123456"
+        birthDate:
+          type: string
+          format: date
+          example: "1990-05-15"
+        address:
+          type: string
+          example: "Av. Las Heras 1234, Resistencia"
+        phone:
+          type: string
+          example: "+543624123456"
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+      required:
+        - firstName
+        - lastName
+        - dni
+        - email
+
+    DriverProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+        identitySubject:
+          type: string
+          example: "auth0|60b8d29f..."
+        personalInfo:
+          $ref: '#/components/schemas/PersonalInfoResponse'
+        status:
+          $ref: '#/components/schemas/DriverStatus'
+        qualificationReason:
+          type: string
+          nullable: true
+          example: "Documentación de licencia en trámite"
+        version:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-10-06T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-10-06T12:00:00Z"
+      required:
+        - id
+        - identitySubject
+        - personalInfo
+        - status
+        - version
+        - createdAt
+        - updatedAt
+
+    ProblemDetail:
+      type: object
+      description: Estructura de error estándar conforme a RFC 9457.
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "about:blank"
+        title:
+          type: string
+          example: "Recurso no encontrado"
+        status:
+          type: integer
+          example: 404
+        code:
+          type: string
+          example: "DRIVER_NOT_FOUND"
+        detail:
+          type: string
+          example: "No se encontró ningún conductor con el ID especificado."
+        instance:
+          type: string
+          example: "/api/v1/drivers/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+        correlationId:
+          type: string
+          example: "corr-98fbc1..."
+      required:
+        - title
+        - status
+        - code
