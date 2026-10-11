@@ -1,33 +1,72 @@
 package ar.edu.utn.frre.m3.domain;
 
+import java.time.Instant;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
-/**
- * Vehicle domain model used for ownership and existence validation.
- * Per HU-06 boundaries, this model is read-only and does not handle vehicle mutations.
- */
 public class Vehicle {
 
     private final UUID id;
     private final UUID driverId;
+    private final String vehicleType;
+    private final Set<String> serviceTypes;
+    private final String countryCode;
+    private final String plate;
+    private final String make;
+    private final String model;
+    private final Integer modelYear;
+    private final String qualificationStatus;
+    private final Long driverVersion;
+    private final Instant createdAt;
 
+    // Constructor compatible con HU-06
     public Vehicle(UUID id, UUID driverId) {
+        this(id, driverId, "AUTO", Set.of("AUTO"), "AR", "ABC123AA", "Generic", "Model", 2022, "PENDING", 1L, Instant.now());
+    }
+
+    public Vehicle(
+        UUID id,
+        UUID driverId,
+        String vehicleType,
+        Set<String> serviceTypes,
+        String countryCode,
+        String plate,
+        String make,
+        String model,
+        Integer modelYear,
+        String qualificationStatus,
+        Long driverVersion,
+        Instant createdAt
+    ) {
         this.id = Objects.requireNonNull(id, "vehicle id cannot be null");
         this.driverId = Objects.requireNonNull(driverId, "driver id cannot be null");
+        this.vehicleType = vehicleType;
+        this.serviceTypes = serviceTypes != null ? Collections.unmodifiableSet(serviceTypes) : Collections.emptySet();
+        this.countryCode = countryCode;
+        this.plate = plate;
+        this.make = make;
+        this.model = model;
+        this.modelYear = modelYear;
+        this.qualificationStatus = qualificationStatus != null ? qualificationStatus : "PENDING";
+        this.driverVersion = driverVersion != null ? driverVersion : 1L;
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
-    public UUID getId() {
-        return id;
-    }
+    public UUID getId() { return id; }
+    public UUID getDriverId() { return driverId; }
+    public String getVehicleType() { return vehicleType; }
+    public Set<String> getServiceTypes() { return serviceTypes; }
+    public String getCountryCode() { return countryCode; }
+    public String getPlate() { return plate; }
+    public String getMake() { return make; }
+    public String getModel() { return model; }
+    public Integer getModelYear() { return modelYear; }
+    public String getQualificationStatus() { return qualificationStatus; }
+    public Long getDriverVersion() { return driverVersion; }
+    public Instant getCreatedAt() { return createdAt; }
 
-    public UUID getDriverId() {
-        return driverId;
-    }
-
-    /**
-     * Verifies if the vehicle belongs to the given driver.
-     */
     public boolean belongsToDriver(UUID candidateDriverId) {
         return this.driverId.equals(candidateDriverId);
     }
@@ -45,4 +84,3 @@ public class Vehicle {
         return Objects.hash(id);
     }
 }
-

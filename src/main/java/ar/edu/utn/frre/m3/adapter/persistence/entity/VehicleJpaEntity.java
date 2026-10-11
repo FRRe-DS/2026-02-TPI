@@ -5,7 +5,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * JPA Entity mapping the 'vehicles' table.
@@ -28,7 +32,7 @@ public class VehicleJpaEntity {
     private String serviceTypes;
 
     @Column(name = "country_code", length = 2)
-    private String countryCode;
+    private String countryCode = "AR";
 
     @Column(name = "plate")
     private String plate;
@@ -61,30 +65,6 @@ public class VehicleJpaEntity {
         UUID id,
         UUID driverId,
         String vehicleType,
-        String plate,
-        String make,
-        String model,
-        Integer modelYear,
-        String qualificationStatus,
-        Long driverVersion,
-        Instant createdAt
-    ) {
-        this.id = id;
-        this.driverId = driverId;
-        this.vehicleType = vehicleType;
-        this.plate = plate;
-        this.make = make;
-        this.model = model;
-        this.modelYear = modelYear;
-        this.qualificationStatus = qualificationStatus;
-        this.driverVersion = driverVersion;
-        this.createdAt = createdAt;
-    }
-
-    public VehicleJpaEntity(
-        UUID id,
-        UUID driverId,
-        String vehicleType,
         String serviceTypes,
         String countryCode,
         String plate,
@@ -100,7 +80,7 @@ public class VehicleJpaEntity {
         this.driverId = driverId;
         this.vehicleType = vehicleType;
         this.serviceTypes = serviceTypes;
-        this.countryCode = countryCode;
+        this.countryCode = countryCode != null ? countryCode : "AR";
         this.plate = plate;
         this.make = make;
         this.model = model;
@@ -111,115 +91,87 @@ public class VehicleJpaEntity {
         this.updatedAt = updatedAt;
     }
 
-    public UUID getId() {
-        return id;
+    // Constructor compatible con Set<String> (HU-04)
+    public VehicleJpaEntity(
+        UUID id,
+        UUID driverId,
+        String vehicleType,
+        Set<String> serviceTypes,
+        String countryCode,
+        String plate,
+        String make,
+        String model,
+        Integer modelYear,
+        String qualificationStatus,
+        Long driverVersion,
+        Instant createdAt
+    ) {
+        this(
+            id,
+            driverId,
+            vehicleType,
+            serviceTypes != null ? String.join(",", serviceTypes) : null,
+            countryCode,
+            plate,
+            make,
+            model,
+            modelYear,
+            qualificationStatus,
+            driverVersion,
+            createdAt,
+            null
+        );
     }
 
-    public void setId(UUID id) {
-        this.id = id;
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
+
+    public UUID getDriverId() { return driverId; }
+    public void setDriverId(UUID driverId) { this.driverId = driverId; }
+
+    public String getVehicleType() { return vehicleType; }
+    public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
+
+    public String getServiceTypes() { return serviceTypes; }
+    public void setServiceTypes(String serviceTypes) { this.serviceTypes = serviceTypes; }
+
+    public Set<String> getServiceTypesSet() {
+        if (serviceTypes == null || serviceTypes.isBlank()) {
+            return Collections.emptySet();
+        }
+        return Arrays.stream(serviceTypes.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
     }
 
-    public UUID getDriverId() {
-        return driverId;
-    }
+    public String getCountryCode() { return countryCode; }
+    public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
 
-    public void setDriverId(UUID driverId) {
-        this.driverId = driverId;
-    }
+    public String getPlate() { return plate; }
+    public void setPlate(String plate) { this.plate = plate; }
 
-    public String getVehicleType() {
-        return vehicleType;
-    }
+    public String getMake() { return make; }
+    public void setMake(String make) { this.make = make; }
 
-    public void setVehicleType(String vehicleType) {
-        this.vehicleType = vehicleType;
-    }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
 
-    public String getServiceTypes() {
-        return serviceTypes;
-    }
+    public Integer getModelYear() { return modelYear; }
+    public void setModelYear(Integer modelYear) { this.modelYear = modelYear; }
 
-    public void setServiceTypes(String serviceTypes) {
-        this.serviceTypes = serviceTypes;
-    }
+    public String getQualificationStatus() { return qualificationStatus; }
+    public void setQualificationStatus(String qualificationStatus) { this.qualificationStatus = qualificationStatus; }
 
-    public String getCountryCode() {
-        return countryCode;
-    }
+    public Long getDriverVersion() { return driverVersion; }
+    public void setDriverVersion(Long driverVersion) { this.driverVersion = driverVersion; }
 
-    public void setCountryCode(String countryCode) {
-        this.countryCode = countryCode;
-    }
+    public Long getVersion() { return driverVersion; }
+    public void setVersion(Long version) { this.driverVersion = version; }
 
-    public String getPlate() {
-        return plate;
-    }
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
-    public void setPlate(String plate) {
-        this.plate = plate;
-    }
-
-    public String getMake() {
-        return make;
-    }
-
-    public void setMake(String make) {
-        this.make = make;
-    }
-
-    public String getModel() {
-        return model;
-    }
-
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public Integer getModelYear() {
-        return modelYear;
-    }
-
-    public void setModelYear(Integer modelYear) {
-        this.modelYear = modelYear;
-    }
-
-    public String getQualificationStatus() {
-        return qualificationStatus;
-    }
-
-    public void setQualificationStatus(String qualificationStatus) {
-        this.qualificationStatus = qualificationStatus;
-    }
-
-    public Long getDriverVersion() {
-        return driverVersion;
-    }
-
-    public void setDriverVersion(Long driverVersion) {
-        this.driverVersion = driverVersion;
-    }
-
-    public Long getVersion() {
-        return driverVersion;
-    }
-
-    public void setVersion(Long version) {
-        this.driverVersion = version;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
