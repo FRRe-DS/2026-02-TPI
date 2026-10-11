@@ -24,23 +24,24 @@ public class QualificationWebController {
         this.checkDriverAptitudeUseCase = Objects.requireNonNull(checkDriverAptitudeUseCase);
     }
 
+    private static final Map<String, String> REASON_DESCRIPTIONS = Map.ofEntries(
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.DRIVER_NOT_APPROVED, "Tu habilitación como conductor no está aprobada"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.DRIVER_SUSPENDED, "Tu cuenta de conductor está suspendida"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.NO_VEHICLE_SELECTED, "No tenés ningún vehículo registrado"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.VEHICLE_NOT_APPROVED, "Tu vehículo no está aprobado"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.VEHICLE_SUSPENDED, "Tu vehículo está suspendido"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.LICENSE_MISSING, "No tenés una licencia registrada"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.LICENSE_NOT_APPROVED, "Tu licencia no está aprobada"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.LICENSE_EXPIRED, "Tu licencia está vencida"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.INSURANCE_MISSING, "No tenés seguro registrado para tu vehículo"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.INSURANCE_NOT_APPROVED, "Tu seguro no está aprobado"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.INSURANCE_EXPIRED, "Tu seguro está vencido"),
+        Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.SERVICE_TYPE_NOT_PERMITTED, "El servicio solicitado no está permitido")
+    );
+
     @GetMapping({"", "/"})
     public String aptitude(@RequestParam(name = "driverId", required = false) String driverIdParam, Model model) {
-        Map<String, String> reasonDescriptions = Map.ofEntries(
-            Map.entry("DRIVER_NOT_APPROVED", "Tu habilitación como conductor no está aprobada"),
-            Map.entry("DRIVER_SUSPENDED", "Tu cuenta de conductor está suspendida"),
-            Map.entry("NO_VEHICLE_SELECTED", "No tenés ningún vehículo registrado"),
-            Map.entry("VEHICLE_NOT_APPROVED", "Tu vehículo no está aprobado"),
-            Map.entry("VEHICLE_SUSPENDED", "Tu vehículo está suspendido"),
-            Map.entry("LICENSE_MISSING", "No tenés una licencia registrada"),
-            Map.entry("LICENSE_NOT_APPROVED", "Tu licencia no está aprobada"),
-            Map.entry("LICENSE_EXPIRED", "Tu licencia está vencida"),
-            Map.entry("INSURANCE_MISSING", "No tenés seguro registrado para tu vehículo"),
-            Map.entry("INSURANCE_NOT_APPROVED", "Tu seguro no está aprobado"),
-            Map.entry("INSURANCE_EXPIRED", "Tu seguro está vencido"),
-            Map.entry("SERVICE_TYPE_NOT_PERMITTED", "El servicio solicitado no está permitido")
-        );
-        model.addAttribute("reasonDescriptions", reasonDescriptions);
+        model.addAttribute("reasonDescriptions", REASON_DESCRIPTIONS);
         model.addAttribute("eligible", false);
         model.addAttribute("noProfile", false);
 

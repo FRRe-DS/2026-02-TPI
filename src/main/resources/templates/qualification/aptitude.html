@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,20 +14,20 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#">M3 — Conductores</a>
+            <a class="navbar-brand" href="/ui/profile">M3 — Conductores</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="#">Mi Perfil</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Mis Vehículos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Documentos</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/ui/qualification/">Aptitud</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Disponibilidad</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ui/profile">Mi Perfil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ui/vehicles">Mis Vehículos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ui/documents">Documentos</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/ui/qualification">Aptitud</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ui/availability">Disponibilidad</a></li>
                 </ul>
                 <div class="d-flex align-items-center">
-                    <span class="text-light me-3" sec:authentication="name">Usuario</span>
+                    <span class="text-light me-3">Conductor</span>
                     <form th:action="@{/logout}" method="post" class="m-0">
                         <button type="submit" class="btn btn-outline-light btn-sm">Salir</button>
                     </form>
@@ -92,7 +92,7 @@
                             Última verificación: <span th:text="${checkedAt}"></span>
                         </div>
                         
-                        <a href="/ui/qualification/" class="btn btn-outline-danger btn-lg">Actualizar</a>
+                        <a href="/ui/qualification" class="btn btn-outline-danger btn-lg">Actualizar</a>
                     </div>
                 </div>
             </div>
