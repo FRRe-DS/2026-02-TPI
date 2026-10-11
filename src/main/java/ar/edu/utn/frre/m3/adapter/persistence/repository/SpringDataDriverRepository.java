@@ -21,8 +21,4 @@ public interface SpringDataDriverRepository extends JpaRepository<DriverJpaEntit
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d FROM DriverJpaEntity d WHERE d.id = :id")
     Optional<DriverJpaEntity> findByIdWithPessimisticLock(@Param("id") UUID id);
-
-    Optional<DriverJpaEntity> findByIdentitySubject(String identitySubject);
-
-    boolean existsByIdentitySubject(String identitySubject);
 }

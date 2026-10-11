@@ -160,8 +160,7 @@ public class Driver {
     public QualificationInfo getQualification() {
         return new QualificationInfo(
                 DriverStatus.valueOf(qualificationStatus.name()),
-                qualificationReason != null ? qualificationReason : "Sin observaciones",
-                updatedAt
+                qualificationReason != null ? qualificationReason : "Sin observaciones"
         );
     }
 
