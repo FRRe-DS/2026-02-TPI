@@ -3,8 +3,11 @@ package ar.edu.utn.frre.m3.hu03;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VehicleRegistrationForm {
     @NotBlank(message = "La marca es obligatoria.")
@@ -24,6 +27,18 @@ public class VehicleRegistrationForm {
     @Size(max = 20, message = "La patente no puede superar los 20 caracteres.")
     private String plate;
 
+    @NotBlank(message = "El color es obligatorio.")
+    @Size(max = 30, message = "El color no puede superar los 30 caracteres.")
+    private String color;
+
+    @NotNull(message = "La capacidad es obligatoria.")
+    @Min(value = 1, message = "La capacidad debe ser como mínimo 1 pasajero.")
+    @Max(value = 6, message = "La capacidad máxima es de 6 pasajeros.")
+    private Integer capacity;
+
+    @NotEmpty(message = "Seleccioná al menos un tipo de servicio.")
+    private List<String> services = new ArrayList<>();
+
     public String getBrand() { return brand; }
     public void setBrand(String brand) { this.brand = brand; }
     public String getModel() { return model; }
@@ -32,4 +47,10 @@ public class VehicleRegistrationForm {
     public void setYear(Integer year) { this.year = year; }
     public String getPlate() { return plate; }
     public void setPlate(String plate) { this.plate = plate; }
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+    public Integer getCapacity() { return capacity; }
+    public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public List<String> getServices() { return services; }
+    public void setServices(List<String> services) { this.services = services; }
 }

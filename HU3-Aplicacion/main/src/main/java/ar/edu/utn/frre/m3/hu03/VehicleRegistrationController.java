@@ -2,9 +2,9 @@ package ar.edu.utn.frre.m3.hu03;
 
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.Locale;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,10 +13,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
 
 @Controller
 public class VehicleRegistrationController {
+    private static final Set<String> ALLOWED_SERVICES = Set.of("STANDARD", "PREMIUM", "DELIVERY", "PETS");
+
     private final VehicleCsvStorage storage;
     private final ConfigurableApplicationContext applicationContext;
 
@@ -50,25 +51,19 @@ public class VehicleRegistrationController {
     public String save(@RequestParam String type,
             @Valid @ModelAttribute("form") VehicleRegistrationForm form,
             BindingResult errors,
-            @RequestParam(required = false) MultipartFile insurance,
-            @RequestParam(required = false) MultipartFile registration,
-            @RequestParam(required = false) MultipartFile license,
             Model model) {
         if (!type.equals("AUTO") && !type.equals("MOTO")) errors.reject("type", "Seleccioná Auto o Moto.");
-        requireFile(insurance, "seguro", errors);
-        requireFile(registration, "cédula", errors);
-        requireFile(license, "licencia", errors);
+        if (form.getServices() == null || !ALLOWED_SERVICES.containsAll(form.getServices())) {
+            errors.rejectValue("services", "services.invalid", "Seleccioná uno o más tipos de servicio válidos.");
+        }
         if (errors.hasErrors()) return formPage(type, form, model);
 
         try {
-            long number = storage.save(type, form, insurance, registration, license);
+            long number = storage.save(type, form);
             model.addAttribute("number", number);
             return "hu03/confirmacion";
-        } catch (IllegalArgumentException ex) {
-            errors.reject("document", ex.getMessage());
-            return formPage(type, form, model);
         } catch (IOException ex) {
-            errors.reject("storage", "No se pudo guardar el registro. Revisá los permisos de la carpeta del proyecto e intentá nuevamente.");
+            errors.reject("storage", "No se pudo guardar el registro. Revisá la carpeta vehiculos e intentá nuevamente.");
             return formPage(type, form, model);
         }
     }
@@ -81,10 +76,6 @@ public class VehicleRegistrationController {
         CompletableFuture.delayedExecutor(2, TimeUnit.SECONDS)
                 .execute(applicationContext::close);
         return "hu03/finalizada";
-    }
-
-    private void requireFile(MultipartFile file, String name, BindingResult errors) {
-        if (file == null || file.isEmpty()) errors.reject("required." + name, "Adjuntá el documento obligatorio: " + name + ".");
     }
 
     private String formPage(String type, VehicleRegistrationForm form, Model model) {
