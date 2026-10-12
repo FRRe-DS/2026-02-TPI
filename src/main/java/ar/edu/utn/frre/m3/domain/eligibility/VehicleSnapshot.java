@@ -10,7 +10,7 @@ public record VehicleSnapshot(
         UUID id,
         QualificationStatus qualificationStatus,
         Set<ServiceType> serviceTypes,
-        DocumentSnapshot insurance
+        DocumentSnapshot insurance, DocumentSnapshot registration
 ) {
     public boolean supportsService(ServiceType serviceType) {
         return serviceTypes != null && serviceTypes.contains(serviceType);

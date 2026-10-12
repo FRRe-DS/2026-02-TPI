@@ -21,8 +21,10 @@ import java.util.UUID;
 public class IntegrationController {
 
     private final CheckDriverAptitudeUseCase checkDriverAptitudeUseCase;
+    private final ar.edu.utn.frre.m3.application.port.DriverRepository drivers;
 
-    public IntegrationController(CheckDriverAptitudeUseCase checkDriverAptitudeUseCase) {
+    public IntegrationController(CheckDriverAptitudeUseCase checkDriverAptitudeUseCase, ar.edu.utn.frre.m3.application.port.DriverRepository drivers) {
+        this.drivers=drivers;
         this.checkDriverAptitudeUseCase = Objects.requireNonNull(checkDriverAptitudeUseCase);
     }
 
@@ -52,7 +54,7 @@ public class IntegrationController {
     @GetMapping("/drivers/{driverId}/summary")
     public ResponseEntity<DriverSummaryDTO> getSummary(@PathVariable UUID driverId) {
         EligibilityResult result = checkDriverAptitudeUseCase.execute(driverId);
-        return ResponseEntity.ok(new DriverSummaryDTO(driverId, "Driver " + driverId.toString().substring(0, 8), result.eligible()));
+        return ResponseEntity.ok(new DriverSummaryDTO(driverId, drivers.findById(driverId).orElseThrow(() -> DriverNotFoundException.forId(driverId)).getDisplayName(), result.eligible()));
     }
 
     public record DriverSummaryDTO(UUID id, String displayName, boolean eligible) {}

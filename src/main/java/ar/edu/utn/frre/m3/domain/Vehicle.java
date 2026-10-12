@@ -68,6 +68,10 @@ public class Vehicle {
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
+    public Vehicle withQualification(QualificationStatus status, long version) {
+        return new Vehicle(id,driverId,vehicleType,serviceTypes,countryCode,plate,make,model,modelYear,
+                status.name(),version,createdAt,color,capacity,serviceCategories);
+    }
     public String getColor() { return color; }
     public Integer getCapacity() { return capacity; }
     public Set<String> getServiceCategories() { return serviceCategories; }

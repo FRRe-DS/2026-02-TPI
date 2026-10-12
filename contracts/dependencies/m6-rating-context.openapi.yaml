@@ -1,7 +1,8 @@
 openapi: 3.0.3
 info:
   title: M6 — Contexto de Viajes para Valoración (Propuesta de Interfaz)
-  version: 0.1.0
+  version: 0.2.0
+  description: Contrato consumido por M3; requiere acuerdo con M6.
 paths:
   /api/v1/trips/{tripId}/rating-context:
     get:
@@ -20,4 +21,20 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Contexto del viaje verificado
+          description: Contexto obtenido del viaje, autorizado para el conductor solicitado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tripId, driverId, clientId, status]
+                properties:
+                  tripId: {type: string, maxLength: 128}
+                  driverId: {type: string, format: uuid}
+                  clientId: {type: string, maxLength: 128}
+                  status: {type: string, enum: [COMPLETED]}
+        '404':
+          description: Viaje inexistente o no asignado al conductor.
+        '422':
+          description: Viaje no completado.
+        '503':
+          description: Servicio temporalmente no disponible.

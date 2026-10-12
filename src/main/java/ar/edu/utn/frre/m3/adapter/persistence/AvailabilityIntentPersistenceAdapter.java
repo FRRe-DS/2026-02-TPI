@@ -66,12 +66,13 @@ public class AvailabilityIntentPersistenceAdapter
 
     @Override
     public void enqueue(AvailabilityIntent intent, String correlationId) {
-        String payload = buildM4Payload(intent, correlationId);
+        UUID commandId=UUID.randomUUID();
+        String payload = buildM4Payload(intent, correlationId,commandId);
         String destination = m4BaseUrl +
             "/api/v1/drivers/" + intent.getDriverId() + "/availability-intent";
 
         OutboxJpaEntity entry = new OutboxJpaEntity(
-                UUID.randomUUID(),
+                commandId,
                 destination,
                 M4_AVAILABILITY_INTENT_MESSAGE_TYPE,
                 "AvailabilityIntent",
@@ -103,9 +104,9 @@ public class AvailabilityIntentPersistenceAdapter
                 d.getCreatedAt(), d.getUpdatedAt(), d.getSyncedAt());
     }
 
-    private String buildM4Payload(AvailabilityIntent intent, String correlationId) {
+    private String buildM4Payload(AvailabilityIntent intent, String correlationId,UUID commandId) {
         Map<String, Object> body = Map.of(
-                "commandId", UUID.randomUUID().toString(),
+                "commandId", commandId.toString(),
                 "driverId", intent.getDriverId().toString(),
                 "vehicleId", intent.getVehicleId().toString(),
                 "connected", intent.isConnected(),

@@ -128,6 +128,8 @@ public class Document {
     public int getRevision() { return revision; }
     public DocumentStatus getStatus() { return status; }
     public boolean isCurrent() { return isCurrent; }
+    public void assignDriverVersion(long version) { if(version<1) throw new IllegalArgumentException("Invalid driver version"); this.driverVersion=version; }
+
     public Long getDriverVersion() { return driverVersion; }
     public String getRejectionReason() { return rejectionReason; }
     public Instant getReviewedAt() { return reviewedAt; }

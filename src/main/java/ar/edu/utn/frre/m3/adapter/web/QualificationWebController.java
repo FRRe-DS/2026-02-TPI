@@ -25,6 +25,12 @@ public class QualificationWebController {
     }
 
     private static final Map<String, String> REASON_DESCRIPTIONS = Map.ofEntries(
+        Map.entry("REGISTRATION_MISSING","No tenés la cédula del vehículo registrada"),
+        Map.entry("REGISTRATION_NOT_APPROVED","La cédula del vehículo no está aprobada"),
+        Map.entry("REGISTRATION_EXPIRED","La cédula del vehículo está vencida"),
+        Map.entry("REGISTRATION_NOT_YET_VALID","La cédula del vehículo todavía no está vigente"),
+        Map.entry("LICENSE_NOT_YET_VALID","La licencia todavía no está vigente"),
+        Map.entry("INSURANCE_NOT_YET_VALID","El seguro todavía no está vigente"),
         Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.DRIVER_NOT_APPROVED, "Tu habilitación como conductor no está aprobada"),
         Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.DRIVER_SUSPENDED, "Tu cuenta de conductor está suspendida"),
         Map.entry(ar.edu.utn.frre.m3.domain.eligibility.EligibilityReason.NO_VEHICLE_SELECTED, "No tenés ningún vehículo registrado"),

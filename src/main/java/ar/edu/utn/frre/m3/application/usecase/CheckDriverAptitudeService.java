@@ -61,7 +61,7 @@ public class CheckDriverAptitudeService implements CheckDriverAptitudeUseCase {
     }
 
     private void checkAuthorization(String targetSubject) {
-        if (currentPrincipal.hasRole("ROLE_OPERATOR") || currentPrincipal.hasRole("OPERATOR")
+        if (currentPrincipal.hasRole("SCOPE_m3:eligibility:read") || currentPrincipal.hasRole("SCOPE_m3:drivers:read") || currentPrincipal.hasRole("ROLE_OPERATOR") || currentPrincipal.hasRole("OPERATOR")
                 || currentPrincipal.hasRole("ROLE_OPERADOR") || currentPrincipal.hasRole("OPERADOR")
                 || currentPrincipal.hasRole("ROLE_ADMIN") || currentPrincipal.hasRole("ADMIN")) {
             return;

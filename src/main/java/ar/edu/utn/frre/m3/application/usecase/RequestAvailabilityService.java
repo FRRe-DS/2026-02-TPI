@@ -41,6 +41,8 @@ public class RequestAvailabilityService implements RequestAvailabilityUseCase {
     private final IdempotencyRepository idempotencyRepository;
     private final UnitOfWork unitOfWork;
     private final Clock clock;
+    private final ar.edu.utn.frre.m3.application.port.DocumentRepository documents;
+    private final ar.edu.utn.frre.m3.application.port.VehicleRepository vehicles;
 
     public RequestAvailabilityService(
             DriverRepository driverRepository,
@@ -51,6 +53,13 @@ public class RequestAvailabilityService implements RequestAvailabilityUseCase {
             UnitOfWork unitOfWork,
             Clock clock) {
 
+        this(driverRepository,intentRepository,auditLogRepository,outboxRepository,idempotencyRepository,unitOfWork,clock,null,null);
+    }
+    public RequestAvailabilityService(DriverRepository driverRepository,AvailabilityIntentRepository intentRepository,
+            AuditLogRepository auditLogRepository,OutboxRepository outboxRepository,IdempotencyRepository idempotencyRepository,
+            UnitOfWork unitOfWork,Clock clock,ar.edu.utn.frre.m3.application.port.DocumentRepository documents,
+            ar.edu.utn.frre.m3.application.port.VehicleRepository vehicles) {
+        this.documents=documents;this.vehicles=vehicles;
         this.driverRepository = Objects.requireNonNull(driverRepository);
         this.intentRepository = Objects.requireNonNull(intentRepository);
         this.auditLogRepository = Objects.requireNonNull(auditLogRepository);
@@ -67,6 +76,17 @@ public class RequestAvailabilityService implements RequestAvailabilityUseCase {
     @Override
     public RequestAvailabilityResult execute(RequestAvailabilityCommand cmd) {
         Objects.requireNonNull(cmd, "command cannot be null");
+        if(cmd.idempotencyKey()==null || cmd.idempotencyKey().length()<16 || cmd.idempotencyKey().length()>128)
+            throw new IllegalArgumentException("Idempotency-Key debe tener entre 16 y 128 caracteres.");
+        if(documents==null) return executeLocked(cmd);
+        return unitOfWork.executeInTransaction(() -> {
+            var driver=driverRepository.findByIdWithPessimisticLock(cmd.driverId()).orElseThrow(() -> new DriverNotFoundException(cmd.driverId()));
+            var result=executeLocked(cmd);
+            if(!result.fromCache()) { driver.incrementVersion(); driverRepository.save(driver); }
+            return result;
+        });
+    }
+    private RequestAvailabilityResult executeLocked(RequestAvailabilityCommand cmd) {
 
         // ── Step 1: Idempotency check (outside transaction — read-only) ──────
         Optional<IdempotencyRecord> existing = idempotencyRepository.findByKey(
@@ -80,7 +100,13 @@ public class RequestAvailabilityService implements RequestAvailabilityUseCase {
             if (!record.requestHash().equals(cmd.requestHash())) {
                 throw new IdempotencyConflictException(cmd.idempotencyKey());
             }
-            // Same key + same hash → replay the previously persisted intent
+            if(!record.getPrincipal().equals(cmd.principal())) throw new IdempotencyConflictException(cmd.idempotencyKey());
+            if(!record.getResponseBody().isBlank()) {
+                String[] data=record.getResponseBody().split("\\|",-1);
+                return new RequestAvailabilityResult(java.util.UUID.fromString(data[0]),cmd.driverId(),java.util.UUID.fromString(data[1]),
+                    Boolean.parseBoolean(data[2]),Boolean.parseBoolean(data[3]),IntentStatus.valueOf(data[4]),Long.parseLong(data[5]),Instant.parse(data[6]),true);
+            }
+            // Legacy entries created before response snapshots were persisted.
             return intentRepository
                     .findByDriverId(cmd.driverId())
                     .map(intent -> toResult(intent, true))
@@ -91,15 +117,27 @@ public class RequestAvailabilityService implements RequestAvailabilityUseCase {
         if (!driverRepository.existsById(cmd.driverId())) {
             throw new DriverNotFoundException(cmd.driverId());
         }
-        if (!driverRepository.isApproved(cmd.driverId())) {
+        if ((cmd.connected() || cmd.available()) && !driverRepository.isApproved(cmd.driverId())) {
             throw new DriverNotQualifiedException(cmd.driverId(),
                     "Driver qualification status is not APPROVED");
         }
-        if (!driverRepository.hasOwnQualifiedVehicle(cmd.driverId(), cmd.vehicleId())) {
+        if (vehicles!=null && !vehicles.existsByIdAndDriverId(cmd.vehicleId(),cmd.driverId()))
+            throw new DriverNotQualifiedException(cmd.driverId(),"El vehículo no pertenece al conductor.");
+        if ((cmd.connected() || cmd.available()) && !driverRepository.hasOwnQualifiedVehicle(cmd.driverId(), cmd.vehicleId())) {
             throw new DriverNotQualifiedException(cmd.driverId(),
                     "Vehicle " + cmd.vehicleId() + " does not belong to driver or is not APPROVED");
         }
 
+        if(documents!=null && (cmd.connected() || cmd.available())) {
+            Instant checked=clock.instant();
+            var license=documents.findCurrentLicenseByDriverId(cmd.driverId()).orElse(null);
+            QualificationService.requireValid(license,checked,"licencia");
+            QualificationService.requireValid(documents.findCurrentByVehicleIdAndType(cmd.vehicleId(),ar.edu.utn.frre.m3.domain.DocumentType.INSURANCE).orElse(null),checked,"seguro");
+            QualificationService.requireValid(documents.findCurrentByVehicleIdAndType(cmd.vehicleId(),ar.edu.utn.frre.m3.domain.DocumentType.VEHICLE_REGISTRATION).orElse(null),checked,"cédula");
+            var vehicle=vehicles.findById(cmd.vehicleId()).orElseThrow();
+            if(license.getServiceTypes().stream().noneMatch(t->vehicle.getServiceTypes().contains(t.name())))
+                throw new DriverNotQualifiedException(cmd.driverId(),"La licencia no habilita el tipo de vehículo.");
+        }
         // ── Step 3 + 4: Atomic transaction ───────────────────────────────────
         Instant now = Instant.now(clock);
         AvailabilityIntent savedIntent = unitOfWork.executeInTransaction(() -> {
@@ -141,7 +179,8 @@ public class RequestAvailabilityService implements RequestAvailabilityUseCase {
                     cmd.idempotencyKey(),
                     cmd.requestHash(),
                     202,
-                    null // minimal — no sensitive data
+                    persisted.getId()+"|"+persisted.getVehicleId()+"|"+persisted.isConnected()+"|"+persisted.isAvailable()+"|"+
+                        persisted.getStatus()+"|"+persisted.getDesiredVersion()+"|"+persisted.getUpdatedAt()
             ));
 
             return persisted;

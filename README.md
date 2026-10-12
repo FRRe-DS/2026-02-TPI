@@ -1,157 +1,130 @@
 # M3 — Conductores y Vehículos
 
-Repositorio del módulo M3 del TPI Desarrollo de Software 2026.
+Módulo del TPI Desarrollo de Software 2026. Java 21, Spring Boot, PostgreSQL,
+Flyway y Thymeleaf. Dominio y casos de uso independientes de Spring.
 
-## Stack
-- Java 21
-- Spring Boot 3.3.4
-- PostgreSQL 16 / Flyway
-- Thymeleaf / Bootstrap 5
-- Docker & Docker Compose
+## Ejecutar la aplicación integrada
 
-## Frontend integrado con persistencia
-
-La integración parte de `main` (`b804907`, PR #9). El formulario de HU-03
-incorporado desde `HU3-Aplicacion` ahora utiliza los casos de uso y PostgreSQL
-de M3: guarda marca, modelo, año, patente, color, capacidad y categorías de
-servicio. `AUTO`/`MOTO` siguen representando el tipo habilitado por la licencia;
-`STANDARD`, `PREMIUM`, `DELIVERY` y `PETS` son categorías comerciales separadas.
-La aplicación independiente en `HU3-Aplicacion` conserva su versión original;
-para usar el flujo integrado, iniciar el proyecto raíz y abrir `/ui`.
-
-- `/ui/register`: crear el perfil de la identidad de la sesión.
-- `/ui/profile`: consultar el perfil guardado.
-- `/ui/vehicles`: consultar vehículos y acceder al formulario nuevo de HU-03.
-- `/ui/documents`: gestionar licencias, seguros, cédulas e historiales.
-- `/ui/qualification`: consultar la aptitud calculada por el backend.
-- `/ui/availability`: guardar solicitudes y ver su estado persistido.
-- `/ui/operator/drivers`: consultar conductores y revisar documentación.
-
-Los formularios web tienen CSRF. El alta del vehículo incrementa la versión del
-conductor y rechaza versiones desactualizadas. El alta queda `PENDING`.
-Las revisiones de documentos exigen un motivo y el rol de operador.
-Los recursos CSS, iconos y JavaScript se sirven localmente.
-
-### Iniciar en Linux con PostgreSQL instalado
-
-Requiere Java 21, `initdb`, `pg_ctl`, `psql` y `createdb`:
+Requiere Java 21 y PostgreSQL (`initdb`, `pg_ctl`, `psql`, `createdb`):
 
 ```bash
-# JAVA_HOME debe apuntar a un JDK 21.
 bash scripts/dev.sh
+# En otra terminal, carga opcional de ejemplos:
+bash scripts/seed-local.sh
 ```
 
-Abrir `http://localhost:3003/ui`. El script crea una base independiente en
-`.local/postgres`, puerto `55434`, que conserva los datos entre ejecuciones.
-Si se configura `SPRING_DATASOURCE_URL`, usa esa conexión sin crear otro clúster.
-La identidad local predeterminada es `user-sub-123`; si no tiene perfil, usar
-**Crear mi perfil**. La autenticación real con M1 todavía requiere completar
-la configuración y el endurecimiento de los adaptadores heredados.
-
-Para detener el PostgreSQL creado por el script:
+Abrir **http://localhost:3003/ui/profile**. La base persiste en `.local/postgres`,
+puerto `55434`; HTTP escucha sólo en loopback. Si `SPRING_DATASOURCE_URL` está
+configurada, se usa esa conexión. Para detener el PostgreSQL local:
 `pg_ctl -D "$PWD/.local/postgres" stop`.
 
-### Demostración opcional sin PostgreSQL
+La carga agrega cinco perfiles sintéticos identificados como **Ejemplo**, cinco
+vehículos y quince documentos. Es repetible y no sobrescribe ni borra filas.
+La identidad local `user-sub-123` corresponde al primer ejemplo, si no existía
+un perfil con esa identidad. Todas las pantallas consultan y modifican la base.
+Las antiguas rutas `/ui/preview/**` redirigen a las pantallas funcionales.
+El subproyecto histórico `HU3-Aplicacion` se conserva; ejecutar desde la raíz
+para usar su formulario integrado con PostgreSQL.
+
+## Pantallas
+
+Comparten menú lateral, tipografía, tarjetas y formularios adaptables al celular.
+El menú móvil incluye cierre con Escape y control de foco.
+Los recursos se sirven localmente y las mutaciones web requieren CSRF.
+
+| Ruta | Función |
+| --- | --- |
+| `/ui/register` | Crear el perfil de la identidad actual |
+| `/ui/profile` | Consultar datos personales y estado persistidos |
+| `/ui/vehicles` | Registrar y consultar vehículos, color, capacidad y servicios |
+| `/ui/documents` | Registrar licencias, seguros y cédulas; consultar revisiones |
+| `/ui/qualification` | Evaluar conductor, vehículo, documentos y compatibilidad de licencia |
+| `/ui/availability` | Solicitar disponibilidad, consultar confirmaciones y reintentar fallos |
+| `/ui/customer-ratings` | Valorar clientes de viajes completados, previa validación con M6 |
+| `/ui/operator/drivers` | Revisar documentos y decidir habilitación de conductores/vehículos |
+
+Aprobar exige documentación actual, aprobada y vigente. Las decisiones conservan
+motivo, actor, fecha y versión. Corregir documentación de perfiles o vehículos
+observados/rechazados los devuelve a `PENDING`; no los habilita automáticamente.
+Una suspensión requiere una decisión administrativa para levantarla.
+
+Los cambios de vehículos, documentos, calificación y solicitudes incrementan la
+versión del conductor. El alta de licencia y las decisiones verifican `If-Match`.
+Los ETag de disponibilidad representan su propia `desiredVersion`.
+`AUTO`/`MOTO` son tipos habilitados por la licencia; `STANDARD`, `PREMIUM`,
+`DELIVERY` y `PETS` son categorías comerciales independientes.
+
+## Identidad M1
+
+`local`, `demo` y `test` admiten `X-Dev-Subject` y `X-Dev-Roles`; en local se
+asignan roles conductor y operador por defecto. **`production` y `docker`
+desactivan esas identidades**, incluso combinados con un perfil de desarrollo.
+Usar esos perfiles al desplegar y configurar las variables de `.env.example`.
+
+La API valida firma JWT, issuer, audiencia, expiración y subject. La web usa
+Authorization Code con PKCE, sesión y logout OIDC. Los conductores acceden a sus
+recursos; los operadores revisan y califican. Las integraciones requieren scopes
+`m3:eligibility:read` o `m3:drivers:read`. Un token técnico no permite operaciones
+de usuarios. Fuera de desarrollo, el arranque falla si falta issuer/JWKS.
+
+## Disponibilidad M4 y valoraciones M6
+
+El worker entrega el outbox mediante HTTP, con identidad estable de comando,
+timeout, lease y hasta seis intentos con espera creciente. `APPLIED` exige un
+HTTP 200 con `appliedVersion` igual a la enviada. HTTP 202 no confirma aplicación.
+Una confirmación vieja no pisa una intención más nueva. Los fallos definitivos
+pueden reintentarse. Desconectar sigue siendo posible con el conductor suspendido;
+conectarse exige habilitación y documentos vigentes.
+
+`APPLIED` confirma la intención en M4; **no afirma que el conductor esté libre de
+viajes**. Sin M4 se conserva el estado pendiente, reintentando o fallido. Configurar
+`M4_BASE_URL`; `M4_WORKER_ENABLED=false` desactiva el worker.
+
+Para valorar un cliente, M6 debe confirmar el mismo viaje, conductor y estado
+`COMPLETED`. El cliente proviene de M6. Se admite puntuación 1–5 y comentario de
+hasta 500 caracteres, con unicidad por conductor/viaje e idempotencia por clave.
+Una caída de M6 devuelve 503 y no guarda datos inventados. Configurar `M6_BASE_URL`
+y las credenciales técnicas `OIDC_TECH_*`.
+
+Los contratos consumidos están en `contracts/dependencies/` y se prueban con
+servidores HTTP controlados. **La interoperabilidad con despliegues reales de
+M1, M4 y M6 requiere configurar esos servicios y acordar los contratos.** M3 no
+incluye sus implementaciones ni sus credenciales.
+
+## REST de los flujos nuevos
+
+- `POST /api/v1/drivers/{id}/qualification`
+- `POST /api/v1/drivers/{id}/vehicles/{vehicleId}/qualification`
+  - Body: `{"status":"APPROVED","reason":"Documentación verificada"}`.
+  - Headers: `If-Match: "N"`, `Idempotency-Key` de 16–128 caracteres.
+  - Historial: `GET` sobre la misma ruta con sufijo `/history`.
+- `POST /api/v1/drivers/{id}/customer-ratings`
+  - Body: `{"tripId":"viaje-id","score":5,"comment":"Buen viaje"}`.
+  - Header: `Idempotency-Key`. `GET` lista las valoraciones.
+- `POST /api/v1/drivers/{id}/availability/retry`
+  - Reprograma la última intención fallida; responde 202.
+
+Los historiales nuevos aceptan `offset` y `limit` (1–100). Errores REST en
+`application/problem+json`; 403 por permisos, 409 por idempotencia, 412 por versión
+desactualizada y 428 si falta `If-Match` donde es obligatorio.
+Documentación interactiva local: `/swagger-ui/index.html`.
+
+## Migraciones y pruebas
+
+V4 corrige índices incompatibles con V1 heredada. V6 conserva los campos HU-03;
+V7 agrega decisiones y valoraciones. Una base con otros checksums de migraciones
+antiguas requiere un plan específico: no usar `flyway repair` ni borrar datos
+para ocultar la incompatibilidad.
 
 ```bash
-bash mvnw -Dspring-boot.run.profiles=demo spring-boot:run
+bash mvnw verify
+# Migraciones y persistencia sobre una base PostgreSQL de pruebas:
+M3_PG_TEST_URL=jdbc:postgresql://127.0.0.1:55433/postgres bash mvnw verify
 ```
 
-Usa H2 persistente en `data/` y carga cuentas sintéticas identificadas como
-prueba. El perfil `local` no genera esas cuentas; la migración heredada V5
-mantiene un conductor/vehículo demo independiente de la identidad local.
-Las antiguas pantallas estáticas quedan en `/ui/preview`.
+Se prueban arquitectura, formularios, CSRF, decisiones con versión e idempotencia,
+valoraciones, confirmaciones M4 fuera de orden, HTTP controlado y JWT firmados
+(firma, audiencia, expiración, roles, scopes y rechazo de cabeceras de desarrollo).
 
-### Alcance pendiente
-
-La solicitud de disponibilidad se guarda junto con auditoría y outbox, pero el
-repositorio aún no incorpora el worker que la entrega a M4. La UI muestra
-`PENDING`, sin afirmar disponibilidad efectiva. Las valoraciones E2 y la
-aprobación administrativa de perfiles/vehículos aún no tienen un flujo completo
-integrado; la revisión disponible es la de documentos.
-
-### Migraciones
-
-Se corrigió V4, que no podía ejecutarse sobre V1 por índices que referían a
-columnas inexistentes de auditoría e idempotencia. V6 agrega los campos de HU-03.
-La cadena V1–V6 está validada sobre una base nueva. Una base anterior que haya
-aplicado otra versión de V1/V2 necesita un plan de migración específico:
-no ejecutar `flyway repair` ni borrar sus datos para eludir los checksums.
-El script local crea una base separada para evitar modificar esas bases.
-
-## HU-05: documentación del conductor
-
-La licencia se registra en `POST /api/v1/drivers/{driverId}/documents` o desde
-`/ui/drivers/{driverId}/documents`. El conductor debe existir previamente en `drivers`.
-La pantalla muestra todas las revisiones y el estado de revisión. Una renovación
-marca la anterior como no actual, conserva su fila y deja la nueva pendiente.
-
-La API recibe los metadatos `documentNumber`, `issuedAt`, `validUntil` y
-`serviceTypes` (`AUTO` y/o `MOTO`). `storageReference` es opcional. Las fechas de
-la API son instantes ISO 8601; `validUntil` es exclusivo. La web usa fechas de
-Argentina y trata el día de vencimiento ingresado como inclusivo.
-
-Para registrar por API, enviar `If-Match` con la versión actual del conductor
-(disponible como `ETag` en el GET de documentos) y una `Idempotency-Key` única de
-16 a 128 caracteres. Reenviar la misma petición con la misma clave devuelve la
-revisión original. El GET devuelve `items` y `nextCursor`; acepta `cursor` y
-`limit` (1 a 100). La respuesta pública omite el número de licencia.
-
-## HU-09: consultar aptitud para trabajar (CLON-14)
-
-Permite consultar si un conductor está habilitado para tomar viajes (elegible), evaluando las siguientes reglas de negocio del dominio:
-1. **Calificación del conductor:** Debe estar en estado `APPROVED`.
-2. **Vehículo habilitado:** Debe poseer al menos un vehículo en estado `APPROVED`.
-3. **Licencia de conducir vigente:** Debe tener una licencia (`DRIVER_LICENSE`) en estado `APPROVED`, vigente en la fecha actual (`validUntil > now`).
-4. **Coincidencia de tipos de servicio:** El tipo de servicio habilitado en el vehículo (`AUTO`, `MOTO`) debe coincidir con los tipos de servicio autorizados en su licencia.
-5. **Cálculo de vigencia:** El resultado es elegible hasta la fecha de expiración de la licencia (o 24 horas si no vence antes). Si no es elegible, incluye la lista detallada de motivos (`reasons`).
-
-### Endpoints REST (Integración con otros módulos)
-
-- `GET /api/v1/integration/drivers/{driverId}/eligibility`
-  - Consulta la aptitud de un conductor por su UUID.
-  - Parámetros opcionales: `?serviceType=AUTO` (para consultar aptitud en un servicio específico).
-  - Devuelve JSON:
-    ```json
-    {
-      "driverId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      "eligible": true,
-      "reasons": [],
-      "validUntil": "2027-10-11T12:00:00Z",
-      "checkedAt": "2026-10-11T20:53:00Z"
-    }
-    ```
-- `POST /api/v1/integration/eligibility/batch`
-  - Consulta en lote para un conjunto de conductores (hasta 100).
-  - Body:
-    ```json
-    {
-      "driverIds": ["a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11", "b1ffcd88-8b1a-4fe7-aa5c-5aa8ac270b22"],
-      "serviceType": "AUTO"
-    }
-    ```
-
-### Interfaz Web (UI para el conductor)
-
-- `GET /ui/qualification`
-  - Vista Thymeleaf donde el conductor autenticado puede consultar su estado de aptitud en tiempo real.
-  - Si es apto, muestra confirmación verde y enlace para publicar disponibilidad.
-  - Si no es apto, muestra el listado de razones específicas a subsanar (ej. vehículo no aprobado, licencia vencida).
-  - Si no tiene perfil registrado, muestra aviso para completarlo.
-
-## Ejecución y Tests
-
-### Ejecutar tests (en contenedor Docker con Java 21)
-```bash
-docker run --rm -v "$(pwd)":/app -w /app eclipse-temurin:21-jdk-alpine ./mvnw test
-```
-
-### Ejecutar localmente con Docker Compose
-```bash
-# Levantar base de datos PostgreSQL
-docker compose up -d postgres
-
-# Ejecutar la aplicación (Spring Boot 3.3.4)
-./mvnw spring-boot:run
-```
-La aplicación inicia en `http://localhost:3003`.
+Existe un modo `demo` con H2 persistente en `data/`; no es el utilizado por
+`scripts/dev.sh` ni por la carga PostgreSQL.

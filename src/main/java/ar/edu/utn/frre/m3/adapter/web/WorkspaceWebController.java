@@ -16,13 +16,17 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class WorkspaceWebController {
+    private final QualificationService qualification;
+    private final CustomerRatingService ratings;
+    private final ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort delivery;
     private final DriverWorkspaceService workspace;
     private final RequestAvailabilityUseCase availability;
     private final RegisterVehicleDocumentUseCase vehicleDocuments;
     private final ReviewDocumentUseCase reviews;
     private final CreateDriverProfileUseCase createDriver;
     public WorkspaceWebController(DriverWorkspaceService workspace, RequestAvailabilityUseCase availability,
-            RegisterVehicleDocumentUseCase vehicleDocuments, ReviewDocumentUseCase reviews, CreateDriverProfileUseCase createDriver) {
+            RegisterVehicleDocumentUseCase vehicleDocuments, ReviewDocumentUseCase reviews, CreateDriverProfileUseCase createDriver, QualificationService qualification, CustomerRatingService ratings, ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort delivery) {
+        this.qualification=qualification; this.ratings=ratings; this.delivery=delivery;
         this.workspace=workspace; this.availability=availability; this.vehicleDocuments=vehicleDocuments;
         this.reviews=reviews; this.createDriver=createDriver;
     }
@@ -89,7 +93,7 @@ public class WorkspaceWebController {
             availability.execute(new RequestAvailabilityCommand(driverId,vehicleId,connected,available,idempotencyKey,hash,
                     workspace.actor(),UUID.randomUUID().toString()));
             flash.addFlashAttribute("success","Solicitud guardada. La confirmación de M4 sigue pendiente.");
-        } catch(IllegalArgumentException | DriverNotQualifiedException | IdempotencyConflictException ex) {
+        } catch(IllegalArgumentException | DomainValidationException | DriverNotQualifiedException | IdempotencyConflictException ex) {
             flash.addFlashAttribute("error",ex.getMessage());
         }
         return "redirect:/ui/availability";
@@ -100,6 +104,11 @@ public class WorkspaceWebController {
     @GetMapping("/ui/operator/drivers/{id}") public String detail(@PathVariable UUID id,Model model) {
         workspace.requireOperator(); model.addAttribute("driver",workspace.driver(id));
         model.addAttribute("vehicles",workspace.vehicles(id)); model.addAttribute("documents",workspace.documents(id));
+        var decisions=new ArrayList<>(qualification.history(id,null,0,100));
+        for(var v:workspace.vehicles(id)) decisions.addAll(qualification.history(id,v.getId(),0,100));
+        decisions.sort(java.util.Comparator.comparing(QualificationDecision::occurredAt).reversed());
+        model.addAttribute("decisions",decisions);
+        model.addAttribute("idempotencyKey",UUID.randomUUID().toString());
         return page(model,"operator-detail","Revisión del conductor");
     }
     @PostMapping("/ui/operator/drivers/{id}/documents/{documentId}/review")
@@ -114,8 +123,32 @@ public class WorkspaceWebController {
         }
         return "redirect:/ui/operator/drivers/"+id;
     }
-    @GetMapping("/ui/customer-ratings") public String ratings(Model model) { return page(model,"ratings","Valoraciones"); }
-    @ExceptionHandler({IllegalArgumentException.class, DriverAccessDeniedException.class})
+    @PostMapping("/ui/operator/drivers/{id}/qualification")
+    public String qualify(@PathVariable UUID id,@RequestParam(required=false) UUID vehicleId,
+            @RequestParam QualificationStatus status,@RequestParam String reason,@RequestParam long version,
+            @RequestParam String idempotencyKey,RedirectAttributes flash) {
+        try { qualification.decide(id,vehicleId,status,reason,version,idempotencyKey); flash.addFlashAttribute("success","Decisión guardada con su historial."); }
+        catch(DomainValidationException | IllegalArgumentException | VersionMismatchException | IdempotencyConflictException ex) { flash.addFlashAttribute("error",ex.getMessage()); }
+        return "redirect:/ui/operator/drivers/"+id;
+    }
+    @PostMapping("/ui/availability/retry")
+    public String retry(RedirectAttributes flash) {
+        delivery.retry(workspace.current().getId(),java.time.Instant.now());
+        flash.addFlashAttribute("success","Se programó el reintento de la última solicitud fallida.");
+        return "redirect:/ui/availability";
+    }
+    @GetMapping("/ui/customer-ratings") public String ratings(Model model) {
+        Driver driver=workspace.current(); model.addAttribute("ratings",ratings.history(driver.getId(),0,100));
+        model.addAttribute("idempotencyKey",UUID.randomUUID().toString());
+        return page(model,"ratings","Valoraciones");
+    }
+    @PostMapping("/ui/customer-ratings") public String rate(@RequestParam String tripId,@RequestParam int score,
+            @RequestParam(defaultValue="") String comment,@RequestParam String idempotencyKey,RedirectAttributes flash) {
+        try { ratings.rate(workspace.current().getId(),tripId,score,comment,idempotencyKey); flash.addFlashAttribute("success","Valoración registrada."); }
+        catch(DomainValidationException | IllegalArgumentException | IntegrationUnavailableException | IdempotencyConflictException ex) { flash.addFlashAttribute("error",ex.getMessage()); }
+        return "redirect:/ui/customer-ratings";
+    }
+    @ExceptionHandler({IllegalArgumentException.class, DriverAccessDeniedException.class, ar.edu.utn.frre.m3.application.exception.DriverAlreadyExistsException.class})
     public String error(RuntimeException ex,Model model) {
         model.addAttribute("error",ex.getMessage()); return page(model,"error","No se pudo completar la operación");
     }

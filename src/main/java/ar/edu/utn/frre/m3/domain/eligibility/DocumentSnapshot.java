@@ -10,7 +10,7 @@ public record DocumentSnapshot(
         UUID id,
         DocumentType type,
         QualificationStatus qualificationStatus,
-        Instant validUntil
+        Instant validUntil, Instant issuedAt, java.util.Set<ar.edu.utn.frre.m3.domain.ServiceType> serviceTypes
 ) {
     public boolean isExpiredAt(Instant now) {
         return validUntil != null && !now.isBefore(validUntil);

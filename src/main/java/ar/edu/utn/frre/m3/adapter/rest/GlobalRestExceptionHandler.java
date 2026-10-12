@@ -315,6 +315,13 @@ public class GlobalRestExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }
 
+    @ExceptionHandler(IntegrationUnavailableException.class)
+    public ResponseEntity<ProblemDetail> integrationUnavailable(IntegrationUnavailableException ex,HttpServletRequest request) {
+        var problem=ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,ex.getMessage());
+        problem.setTitle("Integración no disponible"); problem.setInstance(URI.create(request.getRequestURI()));
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,problem,resolveCorrelationId(request));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);

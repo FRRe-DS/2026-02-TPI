@@ -68,6 +68,8 @@ public class RegisterDriverLicenseService implements RegisterDriverLicenseUseCas
                 previous.markAsNonCurrent();
                 documents.save(previous);
             }
+            if (driver.getQualificationStatus()==ar.edu.utn.frre.m3.domain.QualificationStatus.OBSERVED || driver.getQualificationStatus()==ar.edu.utn.frre.m3.domain.QualificationStatus.REJECTED)
+                driver.changeQualificationStatus(ar.edu.utn.frre.m3.domain.QualificationStatus.PENDING);
             driver.incrementVersion();
             drivers.save(driver);
             Document created = documents.save(next);

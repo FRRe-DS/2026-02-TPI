@@ -28,5 +28,10 @@ public record AvailabilityIntentResponse(
         boolean available,
         IntentStatus status,
         long desiredVersion,
-        Instant updatedAt
-) {}
+        Instant updatedAt, Long appliedVersion
+) {
+    public AvailabilityIntentResponse(UUID intentId,UUID driverId,UUID vehicleId,boolean connected,boolean available,
+            IntentStatus status,long desiredVersion,Instant updatedAt) {
+        this(intentId,driverId,vehicleId,connected,available,status,desiredVersion,updatedAt,null);
+    }
+}

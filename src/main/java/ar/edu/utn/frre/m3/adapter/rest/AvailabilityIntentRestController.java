@@ -80,11 +80,11 @@ public class AvailabilityIntentRestController {
             @PathVariable UUID driverId,
             @RequestHeader(IDEMPOTENCY_HEADER) String idempotencyKey,
             @RequestHeader(value = CORRELATION_HEADER, required = false) String correlationId,
-            @Valid @RequestBody RequestAvailabilityRequest body) {
+            @Valid @RequestBody RequestAvailabilityRequest body, jakarta.servlet.http.HttpServletRequest servletRequest) {
 
         String canonicalBody = toCanonical(driverId, body);
         String requestHash = sha256Hex(canonicalBody);
-        String principal = resolvePrincipal(driverId); // simplified until JWT filter
+        String principal = java.util.Objects.toString(servletRequest.getAttribute("m3.actor"), "driver:"+driverId);
         String corrId = correlationId != null ? correlationId : UUID.randomUUID().toString();
 
         RequestAvailabilityCommand cmd = new RequestAvailabilityCommand(
@@ -104,7 +104,7 @@ public class AvailabilityIntentRestController {
         // 202 Accepted: intent persisted, M4 sync pending
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
-                .header(CORRELATION_HEADER, corrId)
+                .header(CORRELATION_HEADER, corrId).eTag(String.valueOf(result.desiredVersion()))
                 .body(response);
     }
 
@@ -133,8 +133,8 @@ public class AvailabilityIntentRestController {
                         intent.isAvailable(),
                         intent.getStatus(),
                         intent.getDesiredVersion(),
-                        intent.getUpdatedAt()))
-                .map(ResponseEntity::ok)
+                        intent.getUpdatedAt(),intent.getAppliedVersion()))
+                .map(body -> ResponseEntity.ok().eTag(String.valueOf(body.desiredVersion())).body(body))
                 .orElseThrow(() -> new DriverNotFoundException(driverId));
     }
 

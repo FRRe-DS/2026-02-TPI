@@ -1,11 +1,8 @@
-<!doctype html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Registrar vehículo</title><link rel="stylesheet" th:href="@{/css/hu03.css}"><link rel="stylesheet" th:href="@{/css/workspace.css}"></head>
-<body><nav th:replace="~{workspace :: navigation}"></nav><main class="card wide"><p class="eyebrow">HU-03 · <span th:text="${typeLabel}">Auto</span></p><h1>Datos del vehículo</h1>
+<!doctype html><html lang="es" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Registrar vehículo · M3</title><link rel="stylesheet" th:href="@{/css/workspace.css}"></head><body><nav th:replace="~{workspace :: navigation}"></nav><main class="workspace-main"><header><p class="eyebrow">CONDUCTORES Y VEHÍCULOS</p><h1>Registrar vehículo</h1></header><section class="panel">
   <form th:action="@{/ui/vehicles/register}" th:object="${form}" method="post">
     <input type="hidden" name="type" th:value="${type}"><input type="hidden" th:field="*{version}">
     <div class="error" th:if="${#fields.hasGlobalErrors()}" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
-    <div class="fields">
+    <div class="form-grid">
       <label>Marca<input th:field="*{brand}" maxlength="60" required><small class="error" th:errors="*{brand}"></small></label>
       <label>Modelo<input th:field="*{model}" maxlength="60" required><small class="error" th:errors="*{model}"></small></label>
       <label>Año<input th:field="*{year}" type="number" min="1886" max="2100" required><small class="error" th:errors="*{year}"></small></label>
@@ -24,5 +21,4 @@
     <p class="hint">Completá todos los campos obligatorios y seleccioná al menos un servicio.</p>
     <button class="primary" type="submit">Registrar vehículo</button>
   </form>
-</main></body>
-</html>
+</section></main></body></html>

@@ -23,25 +23,34 @@ public final class PersonalInfo {
                         String address,
                         String phone,
                         String email) {
+        this(firstName,lastName,dni,birthDate,address,phone,email,false);
+    }
+
+    /** Reconstitutes an existing, possibly incomplete profile without inventing missing data. */
+    public static PersonalInfo fromStored(String firstName,String lastName,String dni,LocalDate birthDate,String address,String phone,String email) {
+        return new PersonalInfo(firstName,lastName,dni,birthDate,address,phone,email,true);
+    }
+
+    private PersonalInfo(String firstName,String lastName,String dni,LocalDate birthDate,String address,String phone,String email,boolean stored) {
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("El nombre no puede ser nulo ni estar vacío");
         }
-        if (lastName == null || lastName.isBlank()) {
+        if (!stored && (lastName == null || lastName.isBlank())) {
             throw new IllegalArgumentException("El apellido no puede ser nulo ni estar vacío");
         }
-        if (dni == null || dni.isBlank()) {
+        if (!stored && (dni == null || dni.isBlank())) {
             throw new IllegalArgumentException("El DNI no puede ser nulo ni estar vacío");
         }
-        if (email == null || email.isBlank() || !email.contains("@")) {
+        if (!stored && (email == null || email.isBlank() || !email.contains("@"))) {
             throw new IllegalArgumentException("El correo electrónico debe ser válido");
         }
         this.firstName = firstName.trim();
-        this.lastName = lastName.trim();
-        this.dni = dni.trim();
+        this.lastName = lastName == null ? "" : lastName.trim();
+        this.dni = dni == null || dni.isBlank() ? null : dni.trim();
         this.birthDate = birthDate;
         this.address = address != null ? address.trim() : null;
         this.phone = phone != null ? phone.trim() : null;
-        this.email = email.trim().toLowerCase();
+        this.email = email == null || email.isBlank() ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     public String getFirstName() {
@@ -53,7 +62,7 @@ public final class PersonalInfo {
     }
 
     public String getFullName() {
-        return firstName + " " + lastName;
+        return (firstName + " " + lastName).trim();
     }
 
     public String getDni() {

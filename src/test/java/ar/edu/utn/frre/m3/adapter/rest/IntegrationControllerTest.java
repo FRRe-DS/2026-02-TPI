@@ -36,6 +36,8 @@ class IntegrationControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockBean ar.edu.utn.frre.m3.application.port.DriverRepository drivers;
+
     @MockBean
     private CheckDriverAptitudeUseCase checkDriverAptitudeUseCase;
 

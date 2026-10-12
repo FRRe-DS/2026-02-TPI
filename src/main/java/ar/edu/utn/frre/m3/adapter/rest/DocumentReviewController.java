@@ -97,7 +97,7 @@ public class DocumentReviewController {
                     .body(cachedResponse);
         }
 
-        String actor = "OPERATOR";
+        String actor = java.util.Objects.toString(servletRequest.getAttribute("m3.actor"), "LOCAL_OPERATOR");
         ReviewDocumentCommand command = new ReviewDocumentCommand(
                 driverId,
                 documentId,

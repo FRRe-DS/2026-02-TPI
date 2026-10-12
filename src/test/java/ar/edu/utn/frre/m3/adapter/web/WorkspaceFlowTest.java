@@ -79,6 +79,11 @@ class WorkspaceFlowTest {
         assertTrue(intents.findByDriverId(driverId).isEmpty());
         // Operator qualification is a separate use case: seed its result to test HU-10's approved path.
         vehicle.setQualificationStatus("APPROVED"); vehicles.saveAndFlush(vehicle);
+        var now=Instant.now();
+        var license=ar.edu.utn.frre.m3.domain.Document.createPendingLicense(driverId,"TEST-LICENSE",now.minusSeconds(100),now.plusSeconds(86400),java.util.Set.of(ar.edu.utn.frre.m3.domain.ServiceType.AUTO),null,1,version);
+        license.review(ar.edu.utn.frre.m3.domain.ReviewDecision.APPROVED,"Verificado","test",version); documents.save(license);
+        var registration=ar.edu.utn.frre.m3.domain.Document.createPendingRevision(driverId,vehicle.getId(),ar.edu.utn.frre.m3.domain.DocumentType.VEHICLE_REGISTRATION,"REG","Test",now.minusSeconds(100),now.plusSeconds(86400),null,1);
+        registration.review(ar.edu.utn.frre.m3.domain.ReviewDecision.APPROVED,"Verificado","test",version); documents.save(registration);
         long messages=outbox.count();
         for(int i=0;i<2;i++) mvc.perform(post("/ui/availability").with(user(subject)).with(csrf())
                 .param("vehicleId",vehicle.getId().toString()).param("connected","true").param("available","true").param("idempotencyKey",key))
@@ -90,7 +95,7 @@ class WorkspaceFlowTest {
     @Test void integratedHu03PreservesEveryFormField() throws Exception {
         mvc.perform(get("/ui/vehicles/register").with(user(subject))).andExpect(status().isOk());
         mvc.perform(post("/ui/vehicles/register/type").with(user(subject)).with(csrf()).param("type","AUTO"))
-            .andExpect(status().isOk()).andExpect(content().string(containsString("Datos del vehículo")));
+            .andExpect(status().isOk()).andExpect(content().string(containsString("Registrar vehículo")));
         mvc.perform(post("/ui/vehicles/register").with(user(subject)).with(csrf()).param("type","AUTO")
                 .param("plate","CD456EF").param("brand","Ford").param("model","Focus").param("year","2020")
                 .param("color","Azul").param("capacity","4").param("services","STANDARD","PETS").param("version","1"))
@@ -109,7 +114,7 @@ class WorkspaceFlowTest {
     @Test void csrfAndOperatorRoleAreEnforced() throws Exception {
         mvc.perform(post("/ui/vehicles").with(user(subject))).andExpect(status().isForbidden());
         mvc.perform(get("/ui/operator/drivers").with(user(subject).roles("DRIVER")))
-            .andExpect(content().string(containsString("Esta acción requiere un operador")));
+            .andExpect(status().isForbidden());
     }
     @Test void profileCanBeCreatedFromCurrentSession() throws Exception {
         String newSubject="new-"+UUID.randomUUID();

@@ -14,10 +14,18 @@ services:
       SPRING_DATASOURCE_USERNAME: m3_user
       SPRING_DATASOURCE_PASSWORD: m3_password
       OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_JWKS_URI: ${OIDC_JWKS_URI:-}
+      OIDC_AUTH_URI: ${OIDC_AUTH_URI:-http://localhost:8080/realms/clonuber/protocol/openid-connect/auth}
+      OIDC_TOKEN_URI: ${OIDC_TOKEN_URI:-http://localhost:8080/realms/clonuber/protocol/openid-connect/token}
+      OIDC_USERINFO_URI: ${OIDC_USERINFO_URI:-http://localhost:8080/realms/clonuber/protocol/openid-connect/userinfo}
+      OIDC_TECH_TOKEN_URI: ${OIDC_TECH_TOKEN_URI:-}
+      OIDC_TECH_CLIENT_ID: ${OIDC_TECH_CLIENT_ID:-}
+      OIDC_TECH_CLIENT_SECRET: ${OIDC_TECH_CLIENT_SECRET:-}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      M4_WORKER_ENABLED: ${M4_WORKER_ENABLED:-true}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-m3-service}
       OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:-m3-web-client}
-      OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-m3-web-secret}
-      INTEGRATION_MODE: ${INTEGRATION_MODE:-local}
+      OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-}
       SPRING_PROFILES_ACTIVE: docker
       M4_BASE_URL: ${M4_BASE_URL:-http://localhost:4004}
       M6_BASE_URL: ${M6_BASE_URL:-http://localhost:6006}

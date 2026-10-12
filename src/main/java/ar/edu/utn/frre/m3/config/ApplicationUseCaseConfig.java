@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
  * beans.
  */
 @Configuration
+@org.springframework.scheduling.annotation.EnableScheduling
 public class ApplicationUseCaseConfig {
 
     @Bean
@@ -36,6 +37,29 @@ public class ApplicationUseCaseConfig {
         return new ar.edu.utn.frre.m3.application.usecase.DriverWorkspaceService(drivers, vehicles, documents, availability, principal, transactions, clock);
     }
 
+    @Bean
+    public ar.edu.utn.frre.m3.application.usecase.DriverAccessService driverAccessService(DriverRepository drivers,
+            ar.edu.utn.frre.m3.application.port.out.CurrentPrincipalPort principal) {
+        return new ar.edu.utn.frre.m3.application.usecase.DriverAccessService(drivers,principal);
+    }
+    @Bean
+    public ar.edu.utn.frre.m3.application.usecase.QualificationService qualificationService(DriverRepository drivers,
+            VehicleRepository vehicles, DocumentRepository documents, ar.edu.utn.frre.m3.application.port.QualificationRepository history,
+            AuditLogRepository audit, UnitOfWork transactions, ar.edu.utn.frre.m3.application.usecase.DriverAccessService access, Clock clock) {
+        return new ar.edu.utn.frre.m3.application.usecase.QualificationService(drivers,vehicles,documents,history,audit,transactions,access,clock);
+    }
+    @Bean
+    public ar.edu.utn.frre.m3.application.usecase.CustomerRatingService customerRatingService(
+            ar.edu.utn.frre.m3.application.usecase.DriverAccessService access, DriverRepository drivers,
+            ar.edu.utn.frre.m3.application.port.CustomerRatingRepository ratings, ar.edu.utn.frre.m3.application.port.TripContextPort trips,
+            UnitOfWork transactions,Clock clock) {
+        return new ar.edu.utn.frre.m3.application.usecase.CustomerRatingService(access,drivers,ratings,trips,transactions,clock);
+    }
+    @Bean
+    public ar.edu.utn.frre.m3.application.usecase.DeliverAvailabilityService deliverAvailabilityService(
+            ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort queue, ar.edu.utn.frre.m3.application.port.M4AvailabilityPort m4,Clock clock) {
+        return new ar.edu.utn.frre.m3.application.usecase.DeliverAvailabilityService(queue,m4,clock);
+    }
     // ─── Shared infrastructure ───────────────────────────────────────────────
 
     @Bean
@@ -59,11 +83,11 @@ public class ApplicationUseCaseConfig {
     public RegisterVehicleDocumentUseCase registerVehicleDocumentUseCase(
             DocumentRepository documentRepository,
             VehicleRepository vehicleRepository,
-            UnitOfWork unitOfWork) {
+            UnitOfWork unitOfWork, DriverRepository drivers) {
         return new RegisterVehicleDocumentService(
                 documentRepository,
                 vehicleRepository,
-                unitOfWork);
+                unitOfWork, drivers);
     }
 
     // ─── HU-03: Vehicle Query / Vehicles ─────────────────────────────────────
@@ -83,7 +107,7 @@ public class ApplicationUseCaseConfig {
             OutboxRepository outboxRepository,
             IdempotencyRepository idempotencyRepository,
             UnitOfWork unitOfWork,
-            Clock systemClock) {
+            Clock systemClock, DocumentRepository documents, VehicleRepository vehicles) {
         return new RequestAvailabilityService(
                 driverRepository,
                 availabilityIntentRepository,
@@ -91,6 +115,6 @@ public class ApplicationUseCaseConfig {
                 outboxRepository,
                 idempotencyRepository,
                 unitOfWork,
-                systemClock);
+                systemClock,documents,vehicles);
     }
 }

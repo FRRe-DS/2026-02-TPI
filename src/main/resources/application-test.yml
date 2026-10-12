@@ -29,3 +29,7 @@ app:
 logging:
   level:
     ar.edu.utn.frre.m3: WARN
+
+m3:
+  integration:
+    worker-enabled: false

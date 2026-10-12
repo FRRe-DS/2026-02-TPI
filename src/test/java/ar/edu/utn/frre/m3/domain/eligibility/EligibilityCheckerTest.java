@@ -22,15 +22,15 @@ public class EligibilityCheckerTest {
     private final Instant PAST = NOW.minus(1, ChronoUnit.DAYS);
 
     private DocumentSnapshot createLicense(QualificationStatus status, Instant validUntil) {
-        return new DocumentSnapshot(UUID.randomUUID(), DocumentType.LICENSE, status, validUntil);
+        return new DocumentSnapshot(UUID.randomUUID(), DocumentType.LICENSE, status, validUntil, NOW.minusSeconds(100), Set.of(ServiceType.AUTO));
     }
 
     private DocumentSnapshot createInsurance(QualificationStatus status, Instant validUntil) {
-        return new DocumentSnapshot(UUID.randomUUID(), DocumentType.INSURANCE, status, validUntil);
+        return new DocumentSnapshot(UUID.randomUUID(), DocumentType.INSURANCE, status, validUntil, NOW.minusSeconds(100), Set.of(ServiceType.AUTO));
     }
 
     private VehicleSnapshot createVehicle(QualificationStatus status, DocumentSnapshot insurance) {
-        return new VehicleSnapshot(UUID.randomUUID(), status, Set.of(ServiceType.AUTO), insurance);
+        return new VehicleSnapshot(UUID.randomUUID(), status, Set.of(ServiceType.AUTO), insurance, new DocumentSnapshot(UUID.randomUUID(),DocumentType.VEHICLE_REGISTRATION,QualificationStatus.APPROVED,FUTURE,NOW.minusSeconds(100),Set.of()));
     }
 
     private DriverSnapshot createDriver(QualificationStatus status, VehicleSnapshot vehicle, DocumentSnapshot license) {

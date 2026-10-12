@@ -18,38 +18,11 @@ public class DriverMapper {
             return null;
         }
 
-        PersonalInfo personalInfo;
-        if (entity.getFirstName() != null && !entity.getFirstName().isBlank()
-                && entity.getLastName() != null && !entity.getLastName().isBlank()
-                && entity.getEmail() != null && entity.getEmail().contains("@")) {
-            personalInfo = new PersonalInfo(
-                    entity.getFirstName(),
-                    entity.getLastName(),
-                    entity.getDni() != null ? entity.getDni() : "00000000",
-                    entity.getBirthDate(),
-                    entity.getAddress(),
-                    entity.getPhone(),
-                    entity.getEmail()
-            );
-        } else {
-            String full = entity.getDisplayName() != null && !entity.getDisplayName().isBlank()
-                    ? entity.getDisplayName().trim()
-                    : "Conductor";
-            String first = full.contains(" ") ? full.substring(0, full.indexOf(' ')) : full;
-            String last = full.contains(" ") ? full.substring(full.indexOf(' ') + 1) : "Registrado";
-            String email = entity.getIdentitySubject() != null && entity.getIdentitySubject().contains("@")
-                    ? entity.getIdentitySubject()
-                    : "driver-" + (entity.getId() != null ? entity.getId().toString().substring(0, 8) : "default") + "@clonuber.com";
-            personalInfo = new PersonalInfo(
-                    first,
-                    last,
-                    entity.getDni() != null && !entity.getDni().isBlank() ? entity.getDni() : "00000000",
-                    entity.getBirthDate(),
-                    entity.getAddress(),
-                    entity.getPhone(),
-                    email
-            );
-        }
+        String full=entity.getDisplayName().trim();
+        String first=entity.getFirstName()!=null && !entity.getFirstName().isBlank() ? entity.getFirstName() : full;
+        String last=entity.getFirstName()!=null && !entity.getFirstName().isBlank() ? entity.getLastName() : "";
+        PersonalInfo personalInfo=PersonalInfo.fromStored(first,last,entity.getDni(),entity.getBirthDate(),
+                entity.getAddress(),entity.getPhone(),entity.getEmail());
 
         DriverStatus status;
         try {

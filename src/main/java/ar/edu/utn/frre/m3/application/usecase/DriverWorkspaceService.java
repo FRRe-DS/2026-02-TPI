@@ -29,13 +29,14 @@ public class DriverWorkspaceService {
     }
     public Driver driver(UUID id) {
         Driver d=drivers.findById(id).orElseThrow(() -> new IllegalArgumentException("No se encontró el conductor."));
-        if (!principal.hasRole("OPERATOR") && !principal.getSubject().filter(d.getIdentitySubject()::equals).isPresent())
+        if (!isOperator() && !principal.getSubject().filter(d.getIdentitySubject()::equals).isPresent())
             throw new DriverAccessDeniedException("No tenés acceso a este conductor.");
         return d;
     }
     public List<Driver> allDrivers() { requireOperator(); return drivers.findAll(); }
+    private boolean isOperator() { return principal.hasRole("OPERATOR") || principal.hasRole("OPERADOR") || principal.hasRole("ADMIN") || principal.hasRole("ADMINISTRADOR"); }
     public void requireOperator() {
-        if (!principal.hasRole("OPERATOR")) throw new DriverAccessDeniedException("Esta acción requiere un operador.");
+        if (!isOperator()) throw new DriverAccessDeniedException("Esta acción requiere un operador.");
     }
     public String actor() { return principal.getSubject().orElseThrow(() -> new DriverAccessDeniedException("No hay sesión.")); }
     public List<Vehicle> vehicles(UUID id) { driver(id); return vehicles.findByDriverId(id); }

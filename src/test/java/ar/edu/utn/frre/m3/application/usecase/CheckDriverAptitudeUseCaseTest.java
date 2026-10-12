@@ -45,9 +45,9 @@ class CheckDriverAptitudeUseCaseTest {
     }
 
     private DriverSnapshot createEligibleSnapshot(UUID driverId, String subject) {
-        DocumentSnapshot license = new DocumentSnapshot(UUID.randomUUID(), DocumentType.LICENSE, QualificationStatus.APPROVED, now.plus(10, ChronoUnit.DAYS));
-        DocumentSnapshot insurance = new DocumentSnapshot(UUID.randomUUID(), DocumentType.INSURANCE, QualificationStatus.APPROVED, now.plus(10, ChronoUnit.DAYS));
-        VehicleSnapshot vehicle = new VehicleSnapshot(UUID.randomUUID(), QualificationStatus.APPROVED, Set.of(ServiceType.AUTO), insurance);
+        DocumentSnapshot license = new DocumentSnapshot(UUID.randomUUID(), DocumentType.LICENSE, QualificationStatus.APPROVED, now.plus(10, ChronoUnit.DAYS), now.minusSeconds(100), Set.of(ServiceType.AUTO));
+        DocumentSnapshot insurance = new DocumentSnapshot(UUID.randomUUID(), DocumentType.INSURANCE, QualificationStatus.APPROVED, now.plus(10, ChronoUnit.DAYS), now.minusSeconds(100), Set.of(ServiceType.AUTO));
+        VehicleSnapshot vehicle = new VehicleSnapshot(UUID.randomUUID(), QualificationStatus.APPROVED, Set.of(ServiceType.AUTO), insurance, new DocumentSnapshot(UUID.randomUUID(),DocumentType.VEHICLE_REGISTRATION,QualificationStatus.APPROVED,now.plus(10,ChronoUnit.DAYS),now.minusSeconds(100),Set.of()));
         return new DriverSnapshot(driverId, subject, "Test Driver", QualificationStatus.APPROVED, vehicle, license, 1);
     }
 

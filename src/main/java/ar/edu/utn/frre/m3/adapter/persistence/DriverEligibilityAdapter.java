@@ -109,7 +109,8 @@ public class DriverEligibilityAdapter implements DriverEligibilityPort {
                 vehicle.getId(),
                 vehicleStatus,
                 serviceTypes,
-                insuranceSnapshot
+                insuranceSnapshot,
+                documentRepository.findByVehicleIdAndDocumentTypeAndCurrentTrue(vehicle.getId(),DocumentType.VEHICLE_REGISTRATION).map(this::mapDocument).orElse(null)
         );
     }
 
@@ -125,7 +126,7 @@ public class DriverEligibilityAdapter implements DriverEligibilityPort {
                 document.getId(),
                 document.getDocumentType(),
                 docStatus,
-                document.getValidUntil()
+                document.getValidUntil(),document.getIssuedAt(),Set.copyOf(document.getServiceTypes())
         );
     }
 }

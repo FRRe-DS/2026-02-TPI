@@ -1,12 +1,17 @@
 openapi: 3.0.3
 info:
   title: M4 — Disponibilidad y Despacho (Propuesta de Interfaz)
-  version: 0.1.0
+  version: 0.2.0
+  description: Contrato consumido por M3; requiere acuerdo con M4.
 paths:
   /api/v1/drivers/{driverId}/availability-intent:
     put:
       summary: Notificar intención de disponibilidad desde M3
       parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
         - name: driverId
           in: path
           required: true
@@ -19,7 +24,10 @@ paths:
           application/json:
             schema:
               type: object
+              required: [commandId, driverId, vehicleId, connected, available, desiredVersion]
               properties:
+                commandId: {type: string, format: uuid}
+                driverId: {type: string, format: uuid}
                 connected:
                   type: boolean
                 available:
@@ -31,4 +39,17 @@ paths:
                   type: integer
       responses:
         '200':
-          description: Intención aceptada
+          description: Intención aplicada; M4 debe rechazar versiones anteriores y deduplicar commandId.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [appliedVersion]
+                properties:
+                  appliedVersion: {type: integer, format: int64}
+        '202':
+          description: Recibida pero aún no aplicada; M3 reintentará el mismo comando.
+        '422':
+          description: Rechazo definitivo.
+        '503':
+          description: Indisponibilidad temporal; M3 reintentará.

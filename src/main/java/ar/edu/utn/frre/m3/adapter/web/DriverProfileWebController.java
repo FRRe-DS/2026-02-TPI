@@ -50,7 +50,7 @@ public class DriverProfileWebController {
             Driver driver;
             if (driverIdParam != null && !driverIdParam.isBlank()) {
                 driver = getDriverProfileUseCase.getDriverProfileById(UUID.fromString(driverIdParam));
-                if (switchSession && driver != null && request != null) {
+                if (switchSession && driver != null && request != null && Boolean.TRUE.equals(request.getAttribute("m3.development"))) {
                     request.getSession().setAttribute("SIMULATED_SUBJECT", driver.getIdentitySubject());
                 }
             } else {

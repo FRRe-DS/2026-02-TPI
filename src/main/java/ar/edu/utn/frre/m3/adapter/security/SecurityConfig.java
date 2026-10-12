@@ -1,8 +1,10 @@
 package ar.edu.utn.frre.m3.adapter.security;
-
+import ar.edu.utn.frre.m3.application.usecase.DriverAccessService;
+import ar.edu.utn.frre.m3.application.port.out.CurrentPrincipalPort;
+import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,69 +12,86 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-
-/**
- * Configuración de seguridad Spring Security según la arquitectura de M3 (Sección 8.2).
- * Define dos cadenas independientes de filtros:
- * 1. API REST (/api/**): Stateless, autenticación JWT Bearer.
- * 2. Web UI (/ui/**): Sesión, protección CSRF y soporte OAuth2 Login.
- */
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.core.*;
+import org.springframework.security.oauth2.core.oidc.user.*;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.*;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.server.resource.authentication.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
-    private String issuerUri;
-
-    /**
-     * Cadena 1: API REST (/api/**)
-     */
-    @Bean
-    @Order(1)
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/api/**")
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // Permitimos el paso al controlador para que el caso de uso y PrincipalContext resuelvan la identidad y permisos de objeto
-                );
-
-        if (issuerUri != null && !issuerUri.isBlank()) {
-            http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+    @Value("${OIDC_ISSUER:}") private String issuer;
+    @Value("${OIDC_JWKS_URI:}") private String jwks;
+    @Value("${app.security.audience:m3-service}") private String audience;
+    @Value("${OIDC_WEB_CLIENT_ID:m3-web-client}") private String webClient;
+    @Bean @ConditionalOnMissingBean(JwtDecoder.class)
+    public JwtDecoder jwtDecoder(DevelopmentMode mode) {
+        if(issuer.isBlank() || jwks.isBlank()) {
+            if(mode.enabled()) return token->{throw new BadJwtException("M1 JWT no está configurado en este entorno local.");};
+            throw new IllegalStateException("Configurar OIDC_ISSUER y OIDC_JWKS_URI para autenticar tokens de M1.");
         }
-
+        NimbusJwtDecoder decoder=NimbusJwtDecoder.withJwkSetUri(jwks).build();
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(issuer),jwt->{
+            boolean valid=jwt.getAudience().contains(audience) && jwt.getSubject()!=null && !jwt.getSubject().isBlank()
+                    && jwt.getExpiresAt()!=null && !"ID".equalsIgnoreCase(jwt.getClaimAsString("typ"));
+            return valid?OAuth2TokenValidatorResult.success():OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token","Audiencia o tipo de token inválido",null));
+        }));return decoder;
+    }
+    private Collection<GrantedAuthority> authorities(Map<String,Object> claims,String clientId) {
+        Set<GrantedAuthority> result=new HashSet<>();
+        Object scope=claims.get("scope");if(scope instanceof String text) for(String s:text.split(" ")) if(!s.isBlank())result.add(new SimpleGrantedAuthority("SCOPE_"+s));
+        addRoles(result,claims.get("realm_access"));
+        if(claims.get("resource_access") instanceof Map<?,?> resources) addRoles(result,resources.get(clientId));
+        return result;
+    }
+    private void addRoles(Set<GrantedAuthority> result,Object value) {
+        if(value instanceof Map<?,?> map && map.get("roles") instanceof Collection<?> roles)
+            for(Object role:roles) if(role instanceof String r) result.add(new SimpleGrantedAuthority("ROLE_"+r.replaceFirst("^ROLE_", "").toUpperCase(Locale.ROOT)));
+    }
+    @Bean @Order(1)
+    public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
+        JwtAuthenticationConverter converter=new JwtAuthenticationConverter();converter.setJwtGrantedAuthoritiesConverter(jwt->authorities(jwt.getClaims(),audience));
+        http.securityMatcher("/api/**").csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(a->{if(mode.enabled())a.anyRequest().permitAll();else a.anyRequest().authenticated();})
+            .oauth2ResourceServer(o->o.jwt(j->j.decoder(decoder).jwtAuthenticationConverter(converter)))
+            .exceptionHandling(e->e.authenticationEntryPoint((r,s,x)->writeProblem(s,401)).accessDeniedHandler((r,s,x)->writeProblem(s,403)))
+            .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
         return http.build();
     }
-
-    /**
-     * Cadena 2: Web UI (/ui/**) y recursos estáticos
-     */
-    @Bean
-    @Order(2)
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/health/**",
-                                "/actuator/health/**",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
-                                "/webjars/**",
-                                "/vendor/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
-                        .requestMatchers("/ui/**", "/").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .headers(headers -> headers
-                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:;"))
-                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                );
-
+    @Bean @Order(2)
+    public SecurityFilterChain web(HttpSecurity http,DevelopmentMode mode,ClientRegistrationRepository registrations,
+            DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
+        http.authorizeHttpRequests(a->{
+            a.requestMatchers("/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/error").permitAll();
+            if(mode.enabled()) a.anyRequest().permitAll();
+            else a.requestMatchers("/ui/operator/**").hasAnyRole("OPERATOR","OPERADOR","ADMIN","ADMINISTRADOR")
+                .requestMatchers("/ui/**","/").authenticated().anyRequest().denyAll();
+        });
+        if(!mode.enabled()) {
+            var resolver=new DefaultOAuth2AuthorizationRequestResolver(registrations,"/oauth2/authorization");
+            resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
+            var oidc=new OidcUserService();
+            http.oauth2Login(o->o.authorizationEndpoint(e->e.authorizationRequestResolver(resolver)).userInfoEndpoint(e->e.oidcUserService(req->{
+                OidcUser user=oidc.loadUser(req);var roles=new HashSet<GrantedAuthority>(user.getAuthorities());roles.addAll(authorities(user.getIdToken().getClaims(),webClient));
+                return new DefaultOidcUser(roles,user.getIdToken(),user.getUserInfo(),"sub");
+            })).defaultSuccessUrl("/ui",true));
+            var logout=new OidcClientInitiatedLogoutSuccessHandler(registrations);logout.setPostLogoutRedirectUri("{baseUrl}/");
+            http.logout(l->l.logoutSuccessHandler(logout).invalidateHttpSession(true).deleteCookies("JSESSIONID"));
+        }
+        else http.logout(l->l.logoutSuccessUrl("/ui").invalidateHttpSession(true).deleteCookies("JSESSIONID"));
+        http.headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-ancestors 'none';")))
+            .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
         return http.build();
+    }
+    private void writeProblem(jakarta.servlet.http.HttpServletResponse response,int status) throws java.io.IOException {
+        response.setStatus(status);response.setContentType("application/problem+json");
+        response.getWriter().write("{\"type\":\"about:blank\",\"status\":"+status+",\"title\":\""+(status==401?"Unauthorized":"Forbidden")+"\"}");
     }
 }

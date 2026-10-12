@@ -21,12 +21,18 @@ public class RegisterVehicleDocumentService implements RegisterVehicleDocumentUs
     private final DocumentRepository documentRepository;
     private final VehicleRepository vehicleRepository;
     private final UnitOfWork unitOfWork;
+    private final ar.edu.utn.frre.m3.application.port.DriverRepository drivers;
 
     public RegisterVehicleDocumentService(
         DocumentRepository documentRepository,
         VehicleRepository vehicleRepository,
         UnitOfWork unitOfWork
     ) {
+        this(documentRepository,vehicleRepository,unitOfWork,null);
+    }
+    public RegisterVehicleDocumentService(DocumentRepository documentRepository,VehicleRepository vehicleRepository,UnitOfWork unitOfWork,
+            ar.edu.utn.frre.m3.application.port.DriverRepository drivers) {
+        this.drivers=drivers;
         this.documentRepository = Objects.requireNonNull(documentRepository, "documentRepository cannot be null");
         this.vehicleRepository = Objects.requireNonNull(vehicleRepository, "vehicleRepository cannot be null");
         this.unitOfWork = Objects.requireNonNull(unitOfWork, "unitOfWork cannot be null");
@@ -37,6 +43,8 @@ public class RegisterVehicleDocumentService implements RegisterVehicleDocumentUs
         Objects.requireNonNull(command, "command cannot be null");
 
         return unitOfWork.executeInTransaction(() -> {
+            var driver=drivers==null ? null : drivers.findByIdWithPessimisticLock(command.driverId())
+                .orElseThrow(() -> new ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException(command.driverId()));
             // 1. Verify vehicle existence (404 if not found)
             Vehicle vehicle = vehicleRepository.findById(command.vehicleId())
                 .orElseThrow(() -> new VehicleNotFoundException(command.vehicleId()));
@@ -74,6 +82,11 @@ public class RegisterVehicleDocumentService implements RegisterVehicleDocumentUs
                 nextRevision
             );
 
+            if(driver!=null) {
+                driver.incrementVersion(); drivers.save(driver); newDocument.assignDriverVersion(driver.getVersion());
+                if("OBSERVED".equals(vehicle.getQualificationStatus()) || "REJECTED".equals(vehicle.getQualificationStatus()))
+                    vehicleRepository.save(vehicle.withQualification(ar.edu.utn.frre.m3.domain.QualificationStatus.PENDING,driver.getVersion()));
+            }
             // 7. Persist and return
             return documentRepository.save(newDocument);
         });

@@ -209,14 +209,14 @@ class RequestAvailabilityServiceTest {
             when(idempotencyRepository.findByKey(any(), any(), any(), any()))
                     .thenReturn(Optional.empty());
             when(driverRepository.existsById(DRIVER_ID)).thenReturn(true);
-            when(driverRepository.isApproved(DRIVER_ID)).thenReturn(true);
-            when(driverRepository.hasOwnQualifiedVehicle(DRIVER_ID, VEHICLE_ID)).thenReturn(true);
             mockTransactionExecutesInline();
         }
 
         @Test
         @DisplayName("creates new intent in PENDING status with version=1")
         void createNewIntent() {
+            when(driverRepository.isApproved(DRIVER_ID)).thenReturn(true);
+            when(driverRepository.hasOwnQualifiedVehicle(DRIVER_ID, VEHICLE_ID)).thenReturn(true);
             when(intentRepository.findByDriverId(DRIVER_ID)).thenReturn(Optional.empty());
             AvailabilityIntent saved = buildIntent();
             when(intentRepository.save(any())).thenReturn(saved);
@@ -240,6 +240,8 @@ class RequestAvailabilityServiceTest {
         @Test
         @DisplayName("updates existing intent and increments desiredVersion")
         void updateExistingIntent() {
+            when(driverRepository.isApproved(DRIVER_ID)).thenReturn(true);
+            when(driverRepository.hasOwnQualifiedVehicle(DRIVER_ID, VEHICLE_ID)).thenReturn(true);
             AvailabilityIntent existing = buildIntent();
             when(intentRepository.findByDriverId(DRIVER_ID)).thenReturn(Optional.of(existing));
             when(intentRepository.save(any())).thenReturn(existing);
@@ -262,6 +264,8 @@ class RequestAvailabilityServiceTest {
         @Test
         @DisplayName("result status is always PENDING after use case execution")
         void resultStatusIsPending() {
+            when(driverRepository.isApproved(DRIVER_ID)).thenReturn(true);
+            when(driverRepository.hasOwnQualifiedVehicle(DRIVER_ID, VEHICLE_ID)).thenReturn(true);
             when(intentRepository.findByDriverId(DRIVER_ID)).thenReturn(Optional.empty());
             AvailabilityIntent saved = buildIntent();
             when(intentRepository.save(any())).thenReturn(saved);
@@ -283,6 +287,7 @@ class RequestAvailabilityServiceTest {
 
             assertThat(result.connected()).isFalse();
             assertThat(result.available()).isFalse();
+            verify(driverRepository,never()).isApproved(any());
         }
     }
 }

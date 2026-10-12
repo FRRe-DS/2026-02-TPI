@@ -26,13 +26,15 @@ public class DriverRestController {
     }
 
     @PostMapping
-    public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriverRequest request) {
+    public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriverRequest request, org.springframework.security.core.Authentication authentication) {
+        if(authentication!=null && authentication.isAuthenticated() && !authentication.getName().equals(request.getIdentitySubject()))
+            throw new ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException("La identidad del perfil debe coincidir con el token.");
         Driver createdDriver = createDriverProfileUseCase.execute(
                 request.getIdentitySubject(),
                 request.getName()
         );
 
         URI location = URI.create("/api/v1/drivers/" + createdDriver.getId());
-        return ResponseEntity.created(location).body(DriverResponse.fromDomain(createdDriver));
+        return ResponseEntity.created(location).eTag("\""+createdDriver.getVersion()+"\"").body(DriverResponse.fromDomain(createdDriver));
     }
 }
