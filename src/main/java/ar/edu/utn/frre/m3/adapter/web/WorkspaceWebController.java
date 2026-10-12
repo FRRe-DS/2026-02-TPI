@@ -32,7 +32,8 @@ public class WorkspaceWebController {
         this.workspace=workspace; this.availability=availability; this.vehicleDocuments=vehicleDocuments;
         this.reviews=reviews; this.createDriver=createDriver; this.developmentMode=developmentMode;
     }
-    @GetMapping("/") public String root(Model model) { model.addAttribute("development",developmentMode.enabled()); return "access"; }
+    @GetMapping("/") public String root(Model model) { return access(model,false); }
+    @GetMapping("/login/m1") public String m1Unavailable(Model model) { return access(model,true); }
     @GetMapping("/ui/register") public String registration(Model model) { return page(model,"register","Crear mi perfil"); }
     @PostMapping("/ui/register") public String register(@RequestParam String name, RedirectAttributes flash) {
         if(name.isBlank() || name.length()>100) throw new IllegalArgumentException("Ingresá un nombre de hasta 100 caracteres.");
@@ -155,4 +156,9 @@ public class WorkspaceWebController {
         model.addAttribute("error",ex.getMessage()); return page(model,"error","No se pudo completar la operación");
     }
     private String page(Model model,String page,String title) { model.addAttribute("page",page); model.addAttribute("title",title); return "workspace"; }
+    private String access(Model model,boolean m1Unavailable) {
+        model.addAttribute("development",developmentMode.enabled());
+        model.addAttribute("m1Unavailable",m1Unavailable && developmentMode.enabled());
+        return "access";
+    }
 }

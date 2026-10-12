@@ -40,7 +40,9 @@ class WorkspaceFlowTest {
         mvc.perform(get("/"))
             .andExpect(status().isOk()).andExpect(view().name("access"))
             .andExpect(content().string(containsString("Ingresar con M1")))
-            .andExpect(content().string(containsString("/oauth2/authorization/keycloak")));
+            .andExpect(content().string(containsString("/login/m1")));
+        mvc.perform(get("/login/m1"))
+            .andExpect(status().isOk()).andExpect(content().string(containsString("M1 no está iniciado")));
     }
     @Test void rendersEveryIntegratedScreen() throws Exception {
         for(String path : new String[]{"/ui/profile","/ui/vehicles","/ui/documents","/ui/availability","/ui/qualification",
