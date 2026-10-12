@@ -26,9 +26,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    @Value("${OIDC_ISSUER:}") private String issuer;
-    @Value("${OIDC_JWKS_URI:}") private String jwks;
-    @Value("${app.security.audience:m3-service}") private String audience;
+    @Value("${app.security.issuer:${OIDC_ISSUER:}}") private String issuer;
+    @Value("${app.security.jwks-uri:${OIDC_JWKS_URI:}}") private String jwks;
+    @Value("${app.security.audience:${OIDC_AUDIENCE:account}}") private String audience;
     @Value("${OIDC_WEB_CLIENT_ID:m3-web-client}") private String webClient;
     @Bean @ConditionalOnMissingBean(JwtDecoder.class)
     public JwtDecoder jwtDecoder(DevelopmentMode mode) {
@@ -46,13 +46,19 @@ public class SecurityConfig {
     private Collection<GrantedAuthority> authorities(Map<String,Object> claims,String clientId) {
         Set<GrantedAuthority> result=new HashSet<>();
         Object scope=claims.get("scope");if(scope instanceof String text) for(String s:text.split(" ")) if(!s.isBlank())result.add(new SimpleGrantedAuthority("SCOPE_"+s));
+        addRoles(result,claims.get("roles"));
         addRoles(result,claims.get("realm_access"));
         if(claims.get("resource_access") instanceof Map<?,?> resources) addRoles(result,resources.get(clientId));
         return result;
     }
     private void addRoles(Set<GrantedAuthority> result,Object value) {
-        if(value instanceof Map<?,?> map && map.get("roles") instanceof Collection<?> roles)
-            for(Object role:roles) if(role instanceof String r) result.add(new SimpleGrantedAuthority("ROLE_"+r.replaceFirst("^ROLE_", "").toUpperCase(Locale.ROOT)));
+        if(value instanceof Map<?,?> map) {
+            addRoles(result,map.get("roles"));
+        } else if(value instanceof Collection<?> roles) {
+            for(Object role:roles) addRoles(result,role);
+        } else if(value instanceof String role && !role.isBlank()) {
+            result.add(new SimpleGrantedAuthority("ROLE_"+role.replaceFirst("^ROLE_", "").toUpperCase(Locale.ROOT)));
+        }
     }
     @Bean @Order(1)
     public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal) throws Exception {

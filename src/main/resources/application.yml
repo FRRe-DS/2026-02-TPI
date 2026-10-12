@@ -52,17 +52,19 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            authorization-uri: ${OIDC_AUTH_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/auth}
-            token-uri: ${OIDC_TOKEN_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/token}
-            jwk-set-uri: ${OIDC_JWKS_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/certs}
-            user-info-uri: ${OIDC_USERINFO_URI:http://localhost:8080/realms/clonuber/protocol/openid-connect/userinfo}
+            authorization-uri: ${OIDC_AUTH_URI:http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/auth}
+            token-uri: ${OIDC_TOKEN_URI:http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/token}
+            jwk-set-uri: ${OIDC_JWKS_URI:http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/certs}
+            user-info-uri: ${OIDC_USERINFO_URI:http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/userinfo}
             user-name-attribute: preferred_username
 
 # Parámetros para desarrollo y pruebas locales
 app:
   security:
     mock-subject: ${APP_SECURITY_MOCK_SUBJECT:}
-    audience: ${OIDC_AUDIENCE:m3-service}
+    issuer: ${OIDC_ISSUER:}
+    jwks-uri: ${OIDC_JWKS_URI:}
+    audience: ${OIDC_AUDIENCE:account}
 
 # Actuator y Monitoreo
 management:

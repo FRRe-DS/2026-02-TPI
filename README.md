@@ -1,130 +1,133 @@
 # M3 — Conductores y Vehículos
 
-Módulo del TPI Desarrollo de Software 2026. Java 21, Spring Boot, PostgreSQL,
-Flyway y Thymeleaf. Dominio y casos de uso independientes de Spring.
+Microservicio del TPI Desarrollo de Software 2026. Administra perfiles de
+conductores, vehículos, documentación, habilitación y disponibilidad. M3 es dueño
+de sus datos; M1 sólo aporta identidad y acceso mediante el `sub` del JWT.
 
-## Ejecutar la aplicación integrada
+## 1. Iniciar la aplicación
 
-Requiere Java 21 y PostgreSQL (`initdb`, `pg_ctl`, `psql`, `createdb`):
+Se requiere **Java 21** y PostgreSQL con `initdb`, `pg_ctl`, `psql` y `createdb`.
 
 ```bash
 bash scripts/dev.sh
-# En otra terminal, carga opcional de ejemplos:
+# En otra terminal, carga datos sintéticos persistentes:
 bash scripts/seed-local.sh
 ```
 
-Abrir **http://localhost:3003/ui/profile**. La base persiste en `.local/postgres`,
-puerto `55434`; HTTP escucha sólo en loopback. Si `SPRING_DATASOURCE_URL` está
-configurada, se usa esa conexión. Para detener el PostgreSQL local:
-`pg_ctl -D "$PWD/.local/postgres" stop`.
+Abrir [http://localhost:3003/ui/profile](http://localhost:3003/ui/profile). El
+script inicia PostgreSQL en `.local/postgres`, puerto `55434`, y la aplicación
+escucha en loopback. Si se define `SPRING_DATASOURCE_URL`, usa esa base en su
+lugar. Para detener la base local:
 
-La carga agrega cinco perfiles sintéticos identificados como **Ejemplo**, cinco
-vehículos y quince documentos. Es repetible y no sobrescribe ni borra filas.
-La identidad local `user-sub-123` corresponde al primer ejemplo, si no existía
-un perfil con esa identidad. Todas las pantallas consultan y modifican la base.
-Las antiguas rutas `/ui/preview/**` redirigen a las pantallas funcionales.
-El subproyecto histórico `HU3-Aplicacion` se conserva; ejecutar desde la raíz
-para usar su formulario integrado con PostgreSQL.
+```bash
+pg_ctl -D "$PWD/.local/postgres" stop
+```
 
-## Pantallas
+La carga crea cinco perfiles, vehículos y documentos identificados como
+**Ejemplo**. Es repetible: no borra ni reemplaza datos existentes. El primer
+perfil corresponde al sujeto local `user-sub-123`.
 
-Comparten menú lateral, tipografía, tarjetas y formularios adaptables al celular.
-El menú móvil incluye cierre con Escape y control de foco.
-Los recursos se sirven localmente y las mutaciones web requieren CSRF.
+Para M1/Keycloak, copiar `.env.example`, completar sólo los datos del cliente
+M3 asignado por M1 y ejecutar con el perfil `production`. No guardar secretos
+de clientes en el repositorio.
+
+## 2. Qué funciona
+
+Las pantallas comparten navegación lateral, se adaptan a celular y consultan
+PostgreSQL.
 
 | Ruta | Función |
 | --- | --- |
-| `/ui/register` | Crear el perfil de la identidad actual |
-| `/ui/profile` | Consultar datos personales y estado persistidos |
-| `/ui/vehicles` | Registrar y consultar vehículos, color, capacidad y servicios |
-| `/ui/documents` | Registrar licencias, seguros y cédulas; consultar revisiones |
-| `/ui/qualification` | Evaluar conductor, vehículo, documentos y compatibilidad de licencia |
-| `/ui/availability` | Solicitar disponibilidad, consultar confirmaciones y reintentar fallos |
-| `/ui/customer-ratings` | Valorar clientes de viajes completados, previa validación con M6 |
-| `/ui/operator/drivers` | Revisar documentos y decidir habilitación de conductores/vehículos |
+| `/ui/register` y `/ui/profile` | Alta y consulta del perfil de la identidad actual |
+| `/ui/vehicles` | Registro y consulta de vehículos |
+| `/ui/documents` | Licencias, seguros y cédulas con su revisión |
+| `/ui/qualification` | Estado de habilitación y decisiones |
+| `/ui/availability` | Solicitud de disponibilidad, confirmación y reintento hacia M4 |
+| `/ui/customer-ratings` | Valoraciones de clientes verificadas con M6 |
+| `/ui/operator/drivers` | Revisión administrativa de conductores y documentos |
 
-Aprobar exige documentación actual, aprobada y vigente. Las decisiones conservan
-motivo, actor, fecha y versión. Corregir documentación de perfiles o vehículos
-observados/rechazados los devuelve a `PENDING`; no los habilita automáticamente.
-Una suspensión requiere una decisión administrativa para levantarla.
+Una aprobación exige documentación vigente y aprobada. Corregir un documento
+observado o rechazado vuelve a dejar la habilitación en `PENDING`; no habilita
+automáticamente. Las decisiones registran motivo, actor, fecha y versión. Los
+cambios relevantes incrementan la versión del conductor y REST devuelve `ETag`.
 
-Los cambios de vehículos, documentos, calificación y solicitudes incrementan la
-versión del conductor. El alta de licencia y las decisiones verifican `If-Match`.
-Los ETag de disponibilidad representan su propia `desiredVersion`.
-`AUTO`/`MOTO` son tipos habilitados por la licencia; `STANDARD`, `PREMIUM`,
-`DELIVERY` y `PETS` son categorías comerciales independientes.
+M4 recibe disponibilidad mediante outbox transaccional, reintentos y control de
+versiones. M6 valida que el viaje pertenece al conductor y está `COMPLETED`
+antes de guardar una valoración. Los errores REST usan RFC 9457,
+`application/problem+json`.
 
-## Identidad M1
+## 3. Módulos y arquitectura
 
-`local`, `demo` y `test` admiten `X-Dev-Subject` y `X-Dev-Roles`; en local se
-asignan roles conductor y operador por defecto. **`production` y `docker`
-desactivan esas identidades**, incluso combinados con un perfil de desarrollo.
-Usar esos perfiles al desplegar y configurar las variables de `.env.example`.
+La aplicación sigue arquitectura hexagonal. El dominio no depende de Spring,
+HTTP ni JPA.
 
-La API valida firma JWT, issuer, audiencia, expiración y subject. La web usa
-Authorization Code con PKCE, sesión y logout OIDC. Los conductores acceden a sus
-recursos; los operadores revisan y califican. Las integraciones requieren scopes
-`m3:eligibility:read` o `m3:drivers:read`. Un token técnico no permite operaciones
-de usuarios. Fuera de desarrollo, el arranque falla si falta issuer/JWKS.
+| Capa | Ubicación | Responsabilidad |
+| --- | --- | --- |
+| Web | `adapter/web` | Controladores Thymeleaf, formularios, CSRF y navegación |
+| API REST | `adapter/rest` | Contratos HTTP, ETag y respuestas `ProblemDetail` |
+| Aplicación | `application/usecase`, `application/port` | Casos de uso y puertos de entrada/salida |
+| Dominio | `domain` | Reglas de conductor, vehículo, documento y disponibilidad |
+| Persistencia | `adapter/persistence` | Adaptadores JPA, entidades y repositorios PostgreSQL |
+| Integración y seguridad | `adapter/integration`, `adapter/security` | Clientes M1, M4, M6 y JWT/OIDC |
+| Configuración | `config` | Cableado de dependencias |
 
-## Disponibilidad M4 y valoraciones M6
+Usamos **Java 21**, Spring Boot, Thymeleaf, Spring Security OAuth2/OIDC,
+**PostgreSQL**, JPA/Hibernate y Flyway. Las migraciones viven en
+`src/main/resources/db/migration`; M3 usa su propia base `m3_db` y no crea
+claves foráneas hacia datos de otros módulos.
 
-El worker entrega el outbox mediante HTTP, con identidad estable de comando,
-timeout, lease y hasta seis intentos con espera creciente. `APPLIED` exige un
-HTTP 200 con `appliedVersion` igual a la enviada. HTTP 202 no confirma aplicación.
-Una confirmación vieja no pisa una intención más nueva. Los fallos definitivos
-pueden reintentarse. Desconectar sigue siendo posible con el conductor suspendido;
-conectarse exige habilitación y documentos vigentes.
+## 4. Integración con M1 / Keycloak
 
-`APPLIED` confirma la intención en M4; **no afirma que el conductor esté libre de
-viajes**. Sin M4 se conserva el estado pendiente, reintentando o fallido. Configurar
-`M4_BASE_URL`; `M4_WORKER_ENABLED=false` desactiva el worker.
+M3 quedó configurado para el realm compartido:
 
-Para valorar un cliente, M6 debe confirmar el mismo viaje, conductor y estado
-`COMPLETED`. El cliente proviene de M6. Se admite puntuación 1–5 y comentario de
-hasta 500 caracteres, con unicidad por conductor/viaje e idempotencia por clave.
-Una caída de M6 devuelve 503 y no guarda datos inventados. Configurar `M6_BASE_URL`
-y las credenciales técnicas `OIDC_TECH_*`.
+```text
+Issuer:       http://localhost:8080/realms/ds-2025-realm
+JWKS:         http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/certs
+Authorization http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/auth
+Token:        http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/token
+```
 
-Los contratos consumidos están en `contracts/dependencies/` y se prueban con
-servidores HTTP controlados. **La interoperabilidad con despliegues reales de
-M1, M4 y M6 requiere configurar esos servicios y acordar los contratos.** M3 no
-incluye sus implementaciones ni sus credenciales.
+El adaptador valida firma, issuer, audiencia, expiración y `sub`. Acepta roles
+en `realm_access.roles` y en el claim raíz `roles`, formato del realm
+compartido. La web usa Authorization Code con PKCE y callback:
 
-## REST de los flujos nuevos
+```text
+http://localhost:3003/login/oauth2/code/keycloak
+```
+
+M1 debe registrar un cliente web de M3 con ese redirect URI y asignar `DRIVER`
+para el espacio conductor y `OPERATOR` o `ADMIN` para las rutas de operador.
+Las integraciones técnicas necesitan los scopes `m3:eligibility:read` o
+`m3:drivers:read`; los scopes de productos, stock, reservas y envíos no
+autorizan esos endpoints. Si M1 emite audiencia `account`, dejar
+`OIDC_AUDIENCE=account`, valor incluido en `.env.example`.
+
+No hay Keycloak ejecutándose en este entorno, así que desde este repositorio no
+se puede confirmar el login contra M1 en vivo. La compatibilidad se prueba con
+JWT firmados, audiencia y ambos formatos de roles. Con M1 en marcha,
+`/oauth2/authorization/keycloak` verifica el flujo completo. Los perfiles
+`local`, `demo` y `test` usan identidad de desarrollo; `production` y
+`docker` la desactivan.
+
+## 5. API y verificación
+
+Endpoints principales:
 
 - `POST /api/v1/drivers/{id}/qualification`
 - `POST /api/v1/drivers/{id}/vehicles/{vehicleId}/qualification`
-  - Body: `{"status":"APPROVED","reason":"Documentación verificada"}`.
-  - Headers: `If-Match: "N"`, `Idempotency-Key` de 16–128 caracteres.
-  - Historial: `GET` sobre la misma ruta con sufijo `/history`.
 - `POST /api/v1/drivers/{id}/customer-ratings`
-  - Body: `{"tripId":"viaje-id","score":5,"comment":"Buen viaje"}`.
-  - Header: `Idempotency-Key`. `GET` lista las valoraciones.
 - `POST /api/v1/drivers/{id}/availability/retry`
-  - Reprograma la última intención fallida; responde 202.
 
-Los historiales nuevos aceptan `offset` y `limit` (1–100). Errores REST en
-`application/problem+json`; 403 por permisos, 409 por idempotencia, 412 por versión
-desactualizada y 428 si falta `If-Match` donde es obligatorio.
-Documentación interactiva local: `/swagger-ui/index.html`.
-
-## Migraciones y pruebas
-
-V4 corrige índices incompatibles con V1 heredada. V6 conserva los campos HU-03;
-V7 agrega decisiones y valoraciones. Una base con otros checksums de migraciones
-antiguas requiere un plan específico: no usar `flyway repair` ni borrar datos
-para ocultar la incompatibilidad.
+Las mutaciones de conductor requieren `If-Match`; las idempotentes,
+`Idempotency-Key` de 16 a 128 caracteres. Swagger local:
+`/swagger-ui/index.html`.
 
 ```bash
 bash mvnw verify
-# Migraciones y persistencia sobre una base PostgreSQL de pruebas:
+# Incluye migraciones y persistencia contra PostgreSQL:
 M3_PG_TEST_URL=jdbc:postgresql://127.0.0.1:55433/postgres bash mvnw verify
 ```
 
-Se prueban arquitectura, formularios, CSRF, decisiones con versión e idempotencia,
-valoraciones, confirmaciones M4 fuera de orden, HTTP controlado y JWT firmados
-(firma, audiencia, expiración, roles, scopes y rechazo de cabeceras de desarrollo).
-
-Existe un modo `demo` con H2 persistente en `data/`; no es el utilizado por
-`scripts/dev.sh` ni por la carga PostgreSQL.
+V4 sólo agrega las tablas de disponibilidad y los índices compatibles con las
+tablas compartidas de V1. No usar `flyway repair` ni borrar datos para ocultar
+una incompatibilidad de migraciones.

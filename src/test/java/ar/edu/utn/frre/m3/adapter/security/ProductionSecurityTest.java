@@ -36,7 +36,7 @@ class ProductionSecurityTest {
         } catch(Exception ex) { throw new ExceptionInInitializerError(ex); }
     }
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {
-        r.add("OIDC_ISSUER",()->ISSUER);r.add("OIDC_JWKS_URI",()->"http://127.0.0.1:"+JWKS.getAddress().getPort()+"/jwks");
+        r.add("OIDC_ISSUER",()->ISSUER);r.add("OIDC_JWKS_URI",()->"http://127.0.0.1:"+JWKS.getAddress().getPort()+"/jwks");r.add("OIDC_AUDIENCE",()->"m3-service");
     }
     @AfterAll static void stop() { JWKS.stop(0); }
     @Autowired MockMvc mvc;
@@ -52,6 +52,11 @@ class ProductionSecurityTest {
         var jwt=new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(KEY.getKeyID()).build(),claims);jwt.sign(new RSASSASigner(key));return jwt.serialize();
     }
     String token(String sub,String role) throws Exception { return token(sub,"m3-service","",role,Instant.now().plusSeconds(300),KEY); }
+    String tokenWithM1RolesClaim(String sub,String role) throws Exception {
+        var claims=new JWTClaimsSet.Builder().issuer(ISSUER).subject(sub).audience("m3-service").issueTime(Date.from(Instant.now()))
+            .expirationTime(Date.from(Instant.now().plusSeconds(300))).claim("scope","").claim("typ","Bearer").claim("roles",List.of(role)).build();
+        var jwt=new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(KEY.getKeyID()).build(),claims);jwt.sign(new RSASSASigner(KEY));return jwt.serialize();
+    }
     @Test void requiresValidSignatureAudienceExpiryAndIgnoresDevelopmentHeaders() throws Exception {
         mvc.perform(get(path).header("X-Dev-Subject","owner").header("X-Dev-Roles","ADMIN")).andExpect(status().isUnauthorized()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
         mvc.perform(get(path).header("Authorization","Bearer "+token("owner","DRIVER"))).andExpect(status().isOk());
@@ -66,6 +71,9 @@ class ProductionSecurityTest {
         mvc.perform(get("/api/v1/integration/drivers/"+driver+"/eligibility").header("Authorization","Bearer "+technical)).andExpect(status().isOk());
         mvc.perform(get(path).header("Authorization","Bearer "+technical)).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/integration/drivers/"+driver+"/eligibility").header("Authorization","Bearer "+token("owner","DRIVER"))).andExpect(status().isForbidden());
+    }
+    @Test void acceptsM1TopLevelRolesClaim() throws Exception {
+        mvc.perform(get(path).header("Authorization","Bearer "+tokenWithM1RolesClaim("owner","DRIVER"))).andExpect(status().isOk());
     }
     @Test void webRequiresLoginUsesPkceAndRejectsMutationsWithoutCsrf() throws Exception {
         mvc.perform(get("/ui/profile").header("X-Dev-Subject","owner")).andExpect(status().is3xxRedirection());
