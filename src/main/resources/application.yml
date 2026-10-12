@@ -47,7 +47,8 @@ spring:
           keycloak:
             client-id: ${OIDC_WEB_CLIENT_ID:m3-web-client}
             client-secret: ${OIDC_WEB_CLIENT_SECRET:}
-            scope: openid,profile,email
+            # El realm compartido sólo garantiza OpenID; M3 identifica al usuario con `sub`.
+            scope: openid
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
