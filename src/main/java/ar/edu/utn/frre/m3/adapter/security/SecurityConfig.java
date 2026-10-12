@@ -75,7 +75,7 @@ public class SecurityConfig {
     public SecurityFilterChain web(HttpSecurity http,DevelopmentMode mode,ClientRegistrationRepository registrations,
             DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
         http.authorizeHttpRequests(a->{
-            a.requestMatchers("/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/error").permitAll();
+            a.requestMatchers("/","/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/error").permitAll();
             if(mode.enabled()) a.anyRequest().permitAll();
             else a.requestMatchers("/ui/operator/**").hasAnyRole("OPERATOR","OPERADOR","ADMIN","ADMINISTRADOR")
                 .requestMatchers("/ui/**","/").authenticated().anyRequest().denyAll();

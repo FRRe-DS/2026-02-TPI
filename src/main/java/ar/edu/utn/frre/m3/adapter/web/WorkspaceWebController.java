@@ -2,6 +2,7 @@ package ar.edu.utn.frre.m3.adapter.web;
 
 import ar.edu.utn.frre.m3.application.usecase.*;
 import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
+import ar.edu.utn.frre.m3.adapter.security.DevelopmentMode;
 import ar.edu.utn.frre.m3.domain.*;
 import ar.edu.utn.frre.m3.domain.exception.*;
 import java.time.LocalDate;
@@ -24,13 +25,14 @@ public class WorkspaceWebController {
     private final RegisterVehicleDocumentUseCase vehicleDocuments;
     private final ReviewDocumentUseCase reviews;
     private final CreateDriverProfileUseCase createDriver;
+    private final DevelopmentMode developmentMode;
     public WorkspaceWebController(DriverWorkspaceService workspace, RequestAvailabilityUseCase availability,
-            RegisterVehicleDocumentUseCase vehicleDocuments, ReviewDocumentUseCase reviews, CreateDriverProfileUseCase createDriver, QualificationService qualification, CustomerRatingService ratings, ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort delivery) {
+            RegisterVehicleDocumentUseCase vehicleDocuments, ReviewDocumentUseCase reviews, CreateDriverProfileUseCase createDriver, QualificationService qualification, CustomerRatingService ratings, ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort delivery, DevelopmentMode developmentMode) {
         this.qualification=qualification; this.ratings=ratings; this.delivery=delivery;
         this.workspace=workspace; this.availability=availability; this.vehicleDocuments=vehicleDocuments;
-        this.reviews=reviews; this.createDriver=createDriver;
+        this.reviews=reviews; this.createDriver=createDriver; this.developmentMode=developmentMode;
     }
-    @GetMapping("/") public String root() { return "redirect:/ui"; }
+    @GetMapping("/") public String root(Model model) { model.addAttribute("development",developmentMode.enabled()); return "access"; }
     @GetMapping("/ui/register") public String registration(Model model) { return page(model,"register","Crear mi perfil"); }
     @PostMapping("/ui/register") public String register(@RequestParam String name, RedirectAttributes flash) {
         if(name.isBlank() || name.length()>100) throw new IllegalArgumentException("Ingresá un nombre de hasta 100 caracteres.");

@@ -36,6 +36,12 @@ class WorkspaceFlowTest {
         driverId=UUID.randomUUID(); subject="workspace-"+driverId;
         drivers.saveAndFlush(new DriverJpaEntity(driverId,subject,"Prueba Integrada","APPROVED",1L,Instant.now(),Instant.now()));
     }
+    @Test void publicEntryStartsTheM1LoginFlow() throws Exception {
+        mvc.perform(get("/"))
+            .andExpect(status().isOk()).andExpect(view().name("access"))
+            .andExpect(content().string(containsString("Ingresar con M1")))
+            .andExpect(content().string(containsString("/oauth2/authorization/keycloak")));
+    }
     @Test void rendersEveryIntegratedScreen() throws Exception {
         for(String path : new String[]{"/ui/profile","/ui/vehicles","/ui/documents","/ui/availability","/ui/qualification",
                 "/ui/operator/drivers","/ui/operator/drivers/"+driverId,"/ui/customer-ratings","/ui/register","/ui/drivers/"+driverId+"/documents"}) {
