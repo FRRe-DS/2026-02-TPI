@@ -4,7 +4,7 @@ import ar.edu.utn.frre.m3.application.port.AuditLogRepository;
 import ar.edu.utn.frre.m3.application.port.AvailabilityIntentRepository;
 import ar.edu.utn.frre.m3.application.port.DriverRepository;
 import ar.edu.utn.frre.m3.application.port.IdempotencyRepository;
-import ar.edu.utn.frre.m3.application.port.IdempotencyRepository.IdempotencyRecord;
+import ar.edu.utn.frre.m3.domain.IdempotencyRecord;
 import ar.edu.utn.frre.m3.application.port.OutboxRepository;
 import ar.edu.utn.frre.m3.application.port.UnitOfWork;
 import ar.edu.utn.frre.m3.domain.AvailabilityIntent;

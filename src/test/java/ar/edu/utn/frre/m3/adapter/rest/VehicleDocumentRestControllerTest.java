@@ -3,7 +3,6 @@ package ar.edu.utn.frre.m3.adapter.rest;
 import ar.edu.utn.frre.m3.application.usecase.RegisterVehicleDocumentCommand;
 import ar.edu.utn.frre.m3.application.usecase.RegisterVehicleDocumentUseCase;
 import ar.edu.utn.frre.m3.domain.Document;
-import ar.edu.utn.frre.m3.domain.DocumentStatus;
 import ar.edu.utn.frre.m3.domain.DocumentType;
 import ar.edu.utn.frre.m3.domain.exception.InvalidDocumentPeriodException;
 import ar.edu.utn.frre.m3.domain.exception.VehicleForbiddenException;

@@ -15,5 +15,8 @@ public interface SpringDataDocumentRepository extends JpaRepository<DocumentJpaE
     Optional<DocumentJpaEntity> findByVehicleIdAndDocumentTypeAndCurrentTrue(UUID vehicleId, DocumentType documentType);
 
     List<DocumentJpaEntity> findByVehicleIdOrderByRevisionDesc(UUID vehicleId);
-}
 
+    Optional<DocumentJpaEntity> findByDriverIdAndDocumentTypeAndVehicleIdIsNullAndCurrentTrue(UUID driverId, DocumentType type);
+
+    List<DocumentJpaEntity> findByDriverIdAndDocumentTypeAndVehicleIdIsNullOrderByRevisionDesc(UUID driverId, DocumentType type);
+}

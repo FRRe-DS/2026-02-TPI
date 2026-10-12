@@ -1,10 +1,7 @@
 package ar.edu.utn.frre.m3.domain;
 
-/**
- * Types of documents supported for vehicle documentation.
- */
 public enum DocumentType {
+    LICENSE,
     INSURANCE,
     VEHICLE_REGISTRATION
 }
-

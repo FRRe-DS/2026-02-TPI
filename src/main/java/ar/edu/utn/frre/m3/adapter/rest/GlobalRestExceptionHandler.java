@@ -1,252 +1,348 @@
 package ar.edu.utn.frre.m3.adapter.rest;
 
-import ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException;
-import ar.edu.utn.frre.m3.domain.exception.DriverNotQualifiedException;
-import ar.edu.utn.frre.m3.domain.exception.IdempotencyConflictException;
-import ar.edu.utn.frre.m3.domain.exception.InvalidDocumentPeriodException;
-import ar.edu.utn.frre.m3.domain.exception.VehicleForbiddenException;
-import ar.edu.utn.frre.m3.domain.exception.VehicleNotFoundException;
+import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
+import ar.edu.utn.frre.m3.application.exception.DriverAlreadyExistsException;
+import ar.edu.utn.frre.m3.domain.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-/**
- * Global REST exception handler producing RFC 9457 ProblemDetail (application/problem+json).
- */
+import java.net.URI;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 @RestControllerAdvice
 public class GlobalRestExceptionHandler {
 
-    private static final String CORRELATION_HEADER = "X-Correlation-ID";
+    private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
+
+    @ExceptionHandler(DriverAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleDriverAlreadyExists(DriverAlreadyExistsException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setType(URI.create("https://utn.edu.ar/errors/driver-already-exists"));
+        problem.setTitle("Conflicto de identidad de conductor");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_ALREADY_EXISTS");
+        problem.setProperty("correlationId", correlationId);
+        problem.setProperty("identitySubject", ex.getIdentitySubject());
+        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
+    }
+
+    @ExceptionHandler(DriverAccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(DriverAccessDeniedException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setType(URI.create("urn:problem-type:access-denied"));
+        problem.setTitle("Acceso denegado");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "ACCESS_DENIED");
+        problem.setProperty("correlationId", correlationId);
+        return buildResponse(HttpStatus.FORBIDDEN, problem, correlationId);
+    }
+
+    @ExceptionHandler(ar.edu.utn.frre.m3.application.exception.DriverNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleAppDriverNotFound(ar.edu.utn.frre.m3.application.exception.DriverNotFoundException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setType(URI.create("urn:problem-type:driver-not-found"));
+        problem.setTitle("Conductor no encontrado");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_NOT_FOUND");
+        problem.setProperty("correlationId", correlationId);
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
+    }
+
+    @ExceptionHandler(PreconditionRequiredException.class)
+    public ResponseEntity<ProblemDetail> handlePreconditionRequired(PreconditionRequiredException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PRECONDITION_REQUIRED, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:precondition-required"));
+        problem.setTitle("Precondition Required");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "PRECONDITION_REQUIRED");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.PRECONDITION_REQUIRED, problem, correlationId);
+    }
+
+    @ExceptionHandler(VersionMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleVersionMismatch(VersionMismatchException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PRECONDITION_FAILED, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:precondition-failed"));
+        problem.setTitle("Precondition Failed");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "PRECONDITION_FAILED");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.PRECONDITION_FAILED, problem, correlationId);
+    }
 
     // ── HU-10: Availability Intent exceptions ─────────────────────────────────
 
-    @ExceptionHandler(DriverNotFoundException.class)
+    @ExceptionHandler(ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleDriverNotFound(
-        DriverNotFoundException ex,
-        HttpServletRequest request
+            ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException ex,
+            HttpServletRequest request
     ) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problem.setType(URI.create("urn:m3:problem:driver-not-found"));
         problem.setTitle("Driver Not Found");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "DRIVER_NOT_FOUND");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.NOT_FOUND)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
     }
 
     @ExceptionHandler(DriverNotQualifiedException.class)
     public ResponseEntity<ProblemDetail> handleDriverNotQualified(
-        DriverNotQualifiedException ex,
-        HttpServletRequest request
+            DriverNotQualifiedException ex,
+            HttpServletRequest request
     ) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         problem.setType(URI.create("urn:m3:problem:driver-not-qualified"));
         problem.setTitle("Driver Not Qualified");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "DRIVER_NOT_QUALIFIED");
         problem.setProperty("reason", ex.getReason());
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.UNPROCESSABLE_ENTITY)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, problem, correlationId);
     }
 
     @ExceptionHandler(IdempotencyConflictException.class)
     public ResponseEntity<ProblemDetail> handleIdempotencyConflict(
-        IdempotencyConflictException ex,
-        HttpServletRequest request
+            IdempotencyConflictException ex,
+            HttpServletRequest request
     ) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        problem.setType(URI.create("urn:m3:problem:idempotency-conflict"));
-        problem.setTitle("Idempotency Key Conflict");
         problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "IDEMPOTENCY_CONFLICT");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        if (request.getRequestURI() != null && request.getRequestURI().contains("availability-intent")) {
+            problem.setType(URI.create("urn:m3:problem:idempotency-conflict"));
+            problem.setTitle("Idempotency Key Conflict");
+            problem.setProperty("code", "IDEMPOTENCY_CONFLICT");
+        } else {
+            problem.setType(URI.create("urn:m3:problem:conflict"));
+            problem.setTitle("Idempotency Conflict");
+            problem.setProperty("code", "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        }
+
+        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
     }
 
     // ── Existing handlers ─────────────────────────────────────────────────────
 
     @ExceptionHandler(VehicleNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleVehicleNotFound(
-        VehicleNotFoundException ex,
-        HttpServletRequest request
-    ) {
+    public ResponseEntity<ProblemDetail> handleVehicleNotFound(VehicleNotFoundException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problem.setType(URI.create("urn:m3:problem:not-found"));
         problem.setTitle("Vehicle Not Found");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "VEHICLE_NOT_FOUND");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.NOT_FOUND)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
     }
 
     @ExceptionHandler(VehicleForbiddenException.class)
-    public ResponseEntity<ProblemDetail> handleVehicleForbidden(
-        VehicleForbiddenException ex,
-        HttpServletRequest request
-    ) {
+    public ResponseEntity<ProblemDetail> handleVehicleForbidden(VehicleForbiddenException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
         problem.setType(URI.create("urn:m3:problem:forbidden"));
         problem.setTitle("Vehicle Access Forbidden");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "VEHICLE_FORBIDDEN");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.FORBIDDEN)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.FORBIDDEN, problem, correlationId);
+    }
+
+    @ExceptionHandler(DocumentNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleDocumentNotFound(DocumentNotFoundException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:not-found"));
+        problem.setTitle("Document Not Found");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "RESOURCE_NOT_FOUND");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
     }
 
     @ExceptionHandler(InvalidDocumentPeriodException.class)
-    public ResponseEntity<ProblemDetail> handleInvalidPeriod(
-        InvalidDocumentPeriodException ex,
-        HttpServletRequest request
-    ) {
+    public ResponseEntity<ProblemDetail> handleInvalidPeriod(InvalidDocumentPeriodException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         problem.setType(URI.create("urn:m3:problem:invalid-period"));
         problem.setTitle("Invalid Document Period");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "INVALID_DOCUMENT_PERIOD");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.UNPROCESSABLE_ENTITY)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, problem, correlationId);
+    }
+
+    @ExceptionHandler(DomainValidationException.class)
+    public ResponseEntity<ProblemDetail> handleDomainValidation(DomainValidationException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:bad-request"));
+        problem.setTitle("Bad Request");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DOMAIN_VALIDATION_ERROR");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidation(
-        MethodArgumentNotValidException ex,
-        HttpServletRequest request
-    ) {
-        List<Map<String, String>> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-            .map(err -> Map.of(
-                "field", err.getField(),
-                "message", err.getDefaultMessage() != null ? err.getDefaultMessage() : "Invalid value"
-            ))
-            .toList();
+    public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        boolean isDriverEndpoint = request.getRequestURI() != null && request.getRequestURI().endsWith("/api/v1/drivers");
+        String code = isDriverEndpoint ? "VALIDATION_FAILED" : "VALIDATION_ERROR";
+        String title = isDriverEndpoint ? "Error de validación en la solicitud" : "Validation Error";
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            "Validation failed for one or more fields"
-        );
-        problem.setType(URI.create("urn:m3:problem:validation"));
-        problem.setTitle("Validation Error");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                isDriverEndpoint ? "La solicitud contiene datos inválidos o incompletos" : "Request validation failed");
+        problem.setType(URI.create(isDriverEndpoint ? "https://utn.edu.ar/errors/validation-error" : "urn:m3:problem:validation"));
+        problem.setTitle(title);
         problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "VALIDATION_ERROR");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
-        problem.setProperty("errors", fieldErrors);
+        problem.setProperty("code", code);
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        List<Map<String, String>> errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> Map.of(
+                        "field", err.getField(),
+                        "message", err.getDefaultMessage() != null ? err.getDefaultMessage() : "invalid value"
+                ))
+                .toList();
+        problem.setProperty("errors", errors);
+
+        Map<String, String> invalidFields = new HashMap<>();
+        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
+            invalidFields.put(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+        problem.setProperty("invalidFields", invalidFields);
+
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        String detail = String.format("El parámetro '%s' con valor '%s' no tiene el formato válido esperado.",
+                ex.getName(), ex.getValue());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setType(URI.create("urn:problem-type:bad-request"));
+        problem.setTitle("Parámetro inválido");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "INVALID_PARAMETER_FORMAT");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ProblemDetail> handleMalformedJson(
-        HttpMessageNotReadableException ex,
-        HttpServletRequest request
-    ) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            "Malformed JSON request body: " + ex.getMostSpecificCause().getMessage()
-        );
+    public ResponseEntity<ProblemDetail> handleMalformedJson(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Malformed JSON request body: " + ex.getMostSpecificCause().getMessage());
         problem.setType(URI.create("urn:m3:problem:malformed-request"));
         problem.setTitle("Malformed JSON Request");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "MALFORMED_REQUEST");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ProblemDetail> handleMissingHeader(MissingRequestHeaderException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        if ("If-Match".equalsIgnoreCase(ex.getHeaderName())) {
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PRECONDITION_REQUIRED,
+                    "If-Match header is required for state mutating operations");
+            problem.setType(URI.create("urn:m3:problem:precondition-required"));
+            problem.setTitle("Precondition Required");
+            problem.setInstance(URI.create(request.getRequestURI()));
+            problem.setProperty("code", "PRECONDITION_REQUIRED");
+            problem.setProperty("correlationId", correlationId);
+            return buildResponse(HttpStatus.PRECONDITION_REQUIRED, problem, correlationId);
+        }
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Missing required header: " + ex.getHeaderName());
+        problem.setType(URI.create("urn:m3:problem:bad-request"));
+        problem.setTitle("Bad Request");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "MISSING_HEADER");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ProblemDetail> handleIllegalArgument(
-        IllegalArgumentException ex,
-        HttpServletRequest request
-    ) {
+    public ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problem.setType(URI.create("urn:m3:problem:bad-request"));
         problem.setTitle("Bad Request");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "BAD_REQUEST");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleGenericException(
-        Exception ex,
-        HttpServletRequest request
-    ) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred: " + ex.getMessage()
-        );
-        problem.setType(URI.create("urn:m3:problem:internal-error"));
+    public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected internal error occurred");
+        problem.setType(URI.create("urn:m3:problem:internal-server-error"));
         problem.setTitle("Internal Server Error");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "INTERNAL_SERVER_ERROR");
-        problem.setProperty("correlationId", resolveCorrelationId(request));
+        problem.setProperty("correlationId", correlationId);
 
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .header(CORRELATION_HEADER, (String) problem.getProperties().get("correlationId"))
-            .body(problem);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, problem, correlationId);
     }
 
     private String resolveCorrelationId(HttpServletRequest request) {
-        String correlationId = request.getHeader(CORRELATION_HEADER);
-        if (correlationId == null || correlationId.isBlank()) {
-            correlationId = UUID.randomUUID().toString();
-        }
-        return correlationId;
+        Object attr = request.getAttribute(CORRELATION_ID_HEADER);
+        if (attr instanceof String s && !s.isBlank()) return s;
+        String header = request.getHeader(CORRELATION_ID_HEADER);
+        if (header != null && !header.isBlank()) return header;
+        String generated = UUID.randomUUID().toString();
+        request.setAttribute(CORRELATION_ID_HEADER, generated);
+        return generated;
+    }
+
+    private ResponseEntity<ProblemDetail> buildResponse(HttpStatus status, ProblemDetail problem, String correlationId) {
+        return ResponseEntity.status(status)
+                .header(CORRELATION_ID_HEADER, correlationId)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE)
+                .body(problem);
     }
 }
-

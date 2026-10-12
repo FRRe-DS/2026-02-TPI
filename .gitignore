@@ -3,33 +3,53 @@ tpi_hu_arquitectura/
 
 # Artefactos de compilación Maven
 target/
+.vscode/
 !.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
 
 # Variables de entorno y secretos
 .env
 .env.local
 *.env
 
-# IDEs y Editores
-.idea/
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
 *.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.built-jar-stamps
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
 .vscode/
 *.code-workspace
-.classpath
-.project
-.settings/
-.nb-gradle/
-.nbproject/
 
-# Logs
+### Logs & Temp ###
 *.log
-
-# Archivos de Sistema Operativo
-.DS_Store
-Thumbs.db
-
-# Temporales
 *.tmp
 *.bak
 *~
 *.swp
+
+### OS files ###
+.DS_Store
+Thumbs.db

@@ -8,6 +8,10 @@ import ar.edu.utn.frre.m3.application.port.IdempotencyRepository;
 import ar.edu.utn.frre.m3.application.port.OutboxRepository;
 import ar.edu.utn.frre.m3.application.port.UnitOfWork;
 import ar.edu.utn.frre.m3.application.port.VehicleRepository;
+import ar.edu.utn.frre.m3.application.usecase.GetDriverVehiclesService;
+import ar.edu.utn.frre.m3.application.usecase.GetDriverVehiclesUseCase;
+import ar.edu.utn.frre.m3.application.usecase.RegisterDriverLicenseService;
+import ar.edu.utn.frre.m3.application.usecase.RegisterDriverLicenseUseCase;
 import ar.edu.utn.frre.m3.application.usecase.RegisterVehicleDocumentService;
 import ar.edu.utn.frre.m3.application.usecase.RegisterVehicleDocumentUseCase;
 import ar.edu.utn.frre.m3.application.usecase.RequestAvailabilityService;
@@ -17,8 +21,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Spring configuration wiring application use cases and their port dependencies.
- * Keeps domain and application use case classes decoupled from Spring annotations.
+ * Spring configuration providing Application Use Case beans for M3.
+ * Follows Hexagonal Architecture: use cases are wired manually as plain Java beans.
  */
 @Configuration
 public class ApplicationUseCaseConfig {
@@ -28,6 +32,17 @@ public class ApplicationUseCaseConfig {
     @Bean
     public Clock systemClock() {
         return Clock.systemUTC();
+    }
+
+    // ─── HU-01 / HU-02: Driver License ───────────────────────────────────────
+
+    @Bean
+    public RegisterDriverLicenseUseCase registerDriverLicenseUseCase(
+        DriverRepository driverRepository, DocumentRepository documentRepository,
+        UnitOfWork unitOfWork, IdempotencyRepository idempotencyRepository
+    ) {
+        return new RegisterDriverLicenseService(driverRepository, documentRepository,
+                unitOfWork, idempotencyRepository);
     }
 
     // ─── HU-06: Register Vehicle Document ────────────────────────────────────
@@ -43,6 +58,13 @@ public class ApplicationUseCaseConfig {
             vehicleRepository,
             unitOfWork
         );
+    }
+
+    // ─── HU-03: Vehicle Query / Vehicles ─────────────────────────────────────
+
+    @Bean
+    public GetDriverVehiclesUseCase getDriverVehiclesUseCase(VehicleRepository vehicleRepository) {
+        return new GetDriverVehiclesService(vehicleRepository);
     }
 
     // ─── HU-10: Request Availability ─────────────────────────────────────────

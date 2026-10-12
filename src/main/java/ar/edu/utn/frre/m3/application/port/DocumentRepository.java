@@ -6,17 +6,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Output port for Document persistence.
- */
 public interface DocumentRepository {
-
     Document save(Document document);
-
-    Optional<Document> findCurrentByVehicleIdAndType(UUID vehicleId, DocumentType documentType);
-
-    List<Document> findByVehicleIdOrderByRevisionDesc(UUID vehicleId);
-
     Optional<Document> findById(UUID id);
+    Optional<Document> findCurrentByVehicleIdAndType(UUID vehicleId, DocumentType documentType);
+    List<Document> findByVehicleIdOrderByRevisionDesc(UUID vehicleId);
+    Optional<Document> findCurrentLicenseByDriverId(UUID driverId);
+    List<Document> findLicensesByDriverId(UUID driverId);
 }
-

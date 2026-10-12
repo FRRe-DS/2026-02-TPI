@@ -1,44 +1,36 @@
-# ──────────────────────────────────────────────────────────────
-# Stage 1 — Build
-# ──────────────────────────────────────────────────────────────
+# syntax=docker/dockerfile:1
+
+# Etapa 1: Build
 FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
 
-WORKDIR /workspace
+COPY pom.xml mvnw mvnw.cmd ./
+COPY .mvn/ .mvn/
 
-# Copy Maven wrapper and POM first (layer-cache friendly)
-COPY mvnw mvnw.cmd ./
-COPY .mvn .mvn
-COPY pom.xml ./
+# Normaliza finales de línea de Windows (CRLF a LF) y otorga permisos de ejecución
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
 
-RUN chmod +x ./mvnw
-# Download dependencies before copying source (cached unless pom.xml changes)
-RUN ./mvnw dependency:go-offline
+RUN ./mvnw dependency:go-offline -B || true
 
-# Copy source
-COPY src ./src
+COPY src/ src/
+COPY contracts/ contracts/
+RUN ./mvnw clean package -DskipTests -B
 
-# Package, skip tests during image build (tests run in CI)
-RUN ./mvnw package -DskipTests
-
-# ──────────────────────────────────────────────────────────────
-# Stage 2 — Runtime
-# ──────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine AS runtime
-
-# Non-root user for security
-RUN addgroup -S m3 && adduser -S m3 -G m3
-
+# Etapa 2: Runtime
+FROM eclipse-temurin:21-jre-alpine AS runner
 WORKDIR /app
 
-# Copy the fat JAR from the builder stage
-COPY --from=builder /workspace/target/*.jar app.jar
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Give ownership to the non-root user
-RUN chown m3:m3 app.jar
+COPY --from=builder /build/target/*.jar app.jar
+RUN chown -R appuser:appgroup /app
 
-USER m3
+USER appuser
 
 EXPOSE 3003
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3003/health/live || exit 1
 
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \

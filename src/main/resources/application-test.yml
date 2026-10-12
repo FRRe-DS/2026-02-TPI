@@ -1,13 +1,31 @@
+server:
+  port: 0
+
 spring:
+  config:
+    activate:
+      on-profile: test
+
   datasource:
-    url: jdbc:h2:mem:m3test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    url: jdbc:h2:mem:m3_test_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
     username: sa
-    password:
+    password: ""
+
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
+    show-sql: false
     open-in-view: false
+
   flyway:
     enabled: false
 
+app:
+  security:
+    mock-subject: ""
+
+logging:
+  level:
+    ar.edu.utn.frre.m3: WARN

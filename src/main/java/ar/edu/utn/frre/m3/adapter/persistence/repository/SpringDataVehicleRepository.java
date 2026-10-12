@@ -1,15 +1,23 @@
 package ar.edu.utn.frre.m3.adapter.persistence.repository;
 
 import ar.edu.utn.frre.m3.adapter.persistence.entity.VehicleJpaEntity;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Spring Data JPA repository for VehicleJpaEntity (read operations for HU-06 and HU-10).
+ * Spring Data JPA repository for VehicleJpaEntity.
  */
 public interface SpringDataVehicleRepository extends JpaRepository<VehicleJpaEntity, UUID> {
 
-    /** Used by DriverPersistenceAdapter (HU-10) to verify a driver exists. */
+    List<VehicleJpaEntity> findByDriverIdOrderByCreatedAtDesc(UUID driverId);
+
+    Optional<VehicleJpaEntity> findByIdAndDriverId(UUID id, UUID driverId);
+
+    boolean existsByIdAndDriverId(UUID id, UUID driverId);
+
+    List<VehicleJpaEntity> findByDriverId(UUID driverId);
+
     boolean existsByDriverId(UUID driverId);
 }
-

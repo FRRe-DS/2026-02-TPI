@@ -5,7 +5,7 @@ import ar.edu.utn.frre.m3.domain.Vehicle;
 import org.springframework.stereotype.Component;
 
 /**
- * Maps between Vehicle domain model and VehicleJpaEntity.
+ * Traduce entre la entidad de persistencia (VehicleJpaEntity) y el modelo de dominio (Vehicle).
  */
 @Component
 public class VehicleMapper {
@@ -14,7 +14,19 @@ public class VehicleMapper {
         if (entity == null) {
             return null;
         }
-        return new Vehicle(entity.getId(), entity.getDriverId());
+        return new Vehicle(
+            entity.getId(),
+            entity.getDriverId(),
+            entity.getVehicleType(),
+            entity.getServiceTypesSet(),
+            entity.getCountryCode() != null ? entity.getCountryCode() : "AR",
+            entity.getPlate(),
+            entity.getMake(),
+            entity.getModel(),
+            entity.getModelYear(),
+            entity.getQualificationStatus(),
+            entity.getDriverVersion(),
+            entity.getCreatedAt()
+        );
     }
 }
-

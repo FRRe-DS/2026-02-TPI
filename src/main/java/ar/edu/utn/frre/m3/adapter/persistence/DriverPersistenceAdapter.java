@@ -1,55 +1,104 @@
 package ar.edu.utn.frre.m3.adapter.persistence;
 
-import ar.edu.utn.frre.m3.adapter.persistence.entity.VehicleJpaEntity;
+import ar.edu.utn.frre.m3.adapter.persistence.entity.DriverJpaEntity;
+import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataDriverRepository;
 import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataVehicleRepository;
 import ar.edu.utn.frre.m3.application.port.DriverRepository;
+import ar.edu.utn.frre.m3.application.port.out.DriverRepositoryPort;
+import ar.edu.utn.frre.m3.domain.Driver;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
-import org.springframework.stereotype.Component;
+import java.util.stream.Collectors;
 
 /**
- * Persistence adapter implementing {@link DriverRepository}.
- *
- * <p>Checks driver existence and qualification using the existing {@code vehicles}
- * and related tables from V1 migration.
- *
- * <p>NOTE: This is a stub implementation that can be replaced when the full
- * {@code drivers} table migration is added. For now it checks vehicle ownership.
+ * Adaptador de persistencia que implementa el puerto de repositorio para Driver.
+ * Conecta los casos de uso con Spring Data JPA y aísla el modelo de dominio.
  */
-@Component
-public class DriverPersistenceAdapter implements DriverRepository {
+@Repository
+public class DriverPersistenceAdapter implements DriverRepository, DriverRepositoryPort {
 
+    private final SpringDataDriverRepository springDataRepository;
+    private final DriverMapper driverMapper;
     private final SpringDataVehicleRepository vehicleRepository;
 
-    public DriverPersistenceAdapter(SpringDataVehicleRepository vehicleRepository) {
-        this.vehicleRepository = Objects.requireNonNull(vehicleRepository);
+    @Autowired
+    public DriverPersistenceAdapter(SpringDataDriverRepository springDataRepository,
+                                  DriverMapper driverMapper,
+                                  @Autowired(required = false) SpringDataVehicleRepository vehicleRepository) {
+        this.springDataRepository = Objects.requireNonNull(springDataRepository, "springDataRepository es requerido");
+        this.driverMapper = Objects.requireNonNull(driverMapper, "driverMapper es requerido");
+        this.vehicleRepository = vehicleRepository;
     }
 
-    /**
-     * A driver exists if they have at least one vehicle registered in M3.
-     * This will be replaced with a dedicated drivers table query in a future migration.
-     */
     @Override
+    @Transactional(readOnly = true)
+    public Optional<Driver> findById(UUID id) {
+        return springDataRepository.findById(id)
+                .map(driverMapper::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public Optional<Driver> findByIdWithPessimisticLock(UUID id) {
+        return springDataRepository.findByIdWithPessimisticLock(id)
+                .map(driverMapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Driver> findByIdentitySubject(String identitySubject) {
+        return springDataRepository.findByIdentitySubject(identitySubject)
+                .map(driverMapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByIdentitySubject(String identitySubject) {
+        return springDataRepository.existsByIdentitySubject(identitySubject);
+    }
+
+    @Override
+    @Transactional
+    public Driver save(Driver driver) {
+        DriverJpaEntity entity = driverMapper.toJpaEntity(driver);
+        DriverJpaEntity savedEntity = springDataRepository.save(entity);
+        return driverMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Driver> findAll() {
+        return springDataRepository.findAll().stream()
+                .map(driverMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean existsById(UUID driverId) {
-        return vehicleRepository.existsByDriverId(driverId);
+        return springDataRepository.existsById(driverId);
     }
 
-    /**
-     * Stub: always returns true for known drivers.
-     * Replace with: SELECT qualification_status FROM drivers WHERE id = ?
-     * when the drivers table migration is complete.
-     */
     @Override
+    @Transactional(readOnly = true)
     public boolean isApproved(UUID driverId) {
-        // Stub: will be replaced with actual driver qualification check
-        return vehicleRepository.existsByDriverId(driverId);
+        return springDataRepository.findById(driverId)
+                .map(d -> "APPROVED".equalsIgnoreCase(d.getQualificationStatus()))
+                .orElse(false);
     }
 
-    /**
-     * Returns true if the vehicle exists, belongs to the driver, and is APPROVED.
-     */
     @Override
+    @Transactional(readOnly = true)
     public boolean hasOwnQualifiedVehicle(UUID driverId, UUID vehicleId) {
+        if (vehicleRepository == null) {
+            return true;
+        }
         return vehicleRepository.findById(vehicleId)
                 .map(v -> v.getDriverId().equals(driverId) &&
                           "APPROVED".equalsIgnoreCase(v.getQualificationStatus()))
