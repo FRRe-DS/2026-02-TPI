@@ -3,7 +3,6 @@ package ar.edu.utn.frre.m3.adapter.persistence;
 import ar.edu.utn.frre.m3.adapter.persistence.entity.IdempotencyRecordJpaEntity;
 import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataIdempotencyRepository;
 import ar.edu.utn.frre.m3.application.port.IdempotencyRepository;
-import ar.edu.utn.frre.m3.domain.IdempotencyRecord;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -18,9 +17,9 @@ public class IdempotencyPersistenceAdapter implements IdempotencyRepository {
     }
 
     @Override
-    public Optional<IdempotencyRecord> findByKeyAndMethodAndPath(String key, String method, String path) {
+    public Optional<ar.edu.utn.frre.m3.domain.IdempotencyRecord> findByKeyAndMethodAndPath(String key, String method, String path) {
         return repository.findByIdempotencyKeyAndHttpMethodAndRequestPath(key, method, path)
-                .map(entity -> new IdempotencyRecord(
+                .map(entity -> new ar.edu.utn.frre.m3.domain.IdempotencyRecord(
                         entity.getId(),
                         entity.getIdempotencyKey(),
                         entity.getPrincipal(),
@@ -34,7 +33,7 @@ public class IdempotencyPersistenceAdapter implements IdempotencyRepository {
     }
 
     @Override
-    public void save(IdempotencyRecord record) {
+    public void save(ar.edu.utn.frre.m3.domain.IdempotencyRecord record) {
         IdempotencyRecordJpaEntity entity = new IdempotencyRecordJpaEntity(
                 record.getId(),
                 record.getIdempotencyKey(),

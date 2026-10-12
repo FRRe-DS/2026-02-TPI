@@ -25,8 +25,15 @@ public class IdempotencyRecord {
         this.requestPath = Objects.requireNonNull(requestPath, "Request path must not be null");
         this.requestHash = Objects.requireNonNull(requestHash, "Request hash must not be null");
         this.responseStatus = responseStatus;
-        this.responseBody = Objects.requireNonNull(responseBody, "Response body must not be null");
+        this.responseBody = responseBody != null ? responseBody : "";
         this.createdAt = createdAt != null ? createdAt : Instant.now();
+    }
+
+    public IdempotencyRecord(String principal, String httpMethod, String requestPath,
+                             String idempotencyKey, String requestHash, int responseStatus,
+                             String responseBody) {
+        this(UUID.randomUUID(), idempotencyKey, principal, httpMethod, requestPath, requestHash,
+                responseStatus, responseBody != null ? responseBody : "", Instant.now());
     }
 
     public UUID getId() { return id; }
@@ -35,6 +42,7 @@ public class IdempotencyRecord {
     public String getHttpMethod() { return httpMethod; }
     public String getRequestPath() { return requestPath; }
     public String getRequestHash() { return requestHash; }
+    public String requestHash() { return requestHash; }
     public int getResponseStatus() { return responseStatus; }
     public String getResponseBody() { return responseBody; }
     public Instant getCreatedAt() { return createdAt; }

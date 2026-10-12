@@ -23,6 +23,9 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = DocumentReviewController.class)
 @Import(GlobalRestExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class DocumentReviewControllerTest {
 
     @Autowired private MockMvc mockMvc;

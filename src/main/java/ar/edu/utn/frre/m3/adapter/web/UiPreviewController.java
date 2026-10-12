@@ -20,10 +20,10 @@ public class UiPreviewController {
             Map.of("id", "2c7464cc-0c10-4e12-89c8-c91cdbcb4915", "name", "Lucía Gómez", "status", "Observado", "service", "Moto", "updated", "08 oct 2026")
     );
 
-    @GetMapping({"/ui", "/ui/"})
+    @GetMapping({"/ui/preview", "/ui/preview/"})
     public String home(Model model) { return page(model, "home", "Inicio"); }
 
-    @GetMapping("/ui/profile")
+    @GetMapping("/ui/preview/profile")
     public String profile(Model model) { return page(model, "profile", "Mi perfil"); }
 
     @GetMapping("/ui/vehicles")
@@ -32,7 +32,7 @@ public class UiPreviewController {
     @GetMapping("/ui/documents")
     public String documents(Model model) { return page(model, "documents", "Documentación"); }
 
-    @GetMapping("/ui/qualification")
+    @GetMapping("/ui/preview/qualification")
     public String qualification(Model model) { return page(model, "qualification", "Habilitación"); }
 
     @GetMapping("/ui/availability")

@@ -1,9 +1,17 @@
 -- V1__initial_schema.sql: Esquema inicial E1 para M3
 CREATE TABLE IF NOT EXISTS drivers (
     id UUID PRIMARY KEY,
-    identity_subject VARCHAR(100) UNIQUE,
+    identity_subject VARCHAR(128) UNIQUE,
     display_name VARCHAR(100) NOT NULL,
     qualification_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    qualification_reason VARCHAR(500),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    dni VARCHAR(32),
+    birth_date DATE,
+    address VARCHAR(255),
+    phone VARCHAR(50),
+    email VARCHAR(150),
     version BIGINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP

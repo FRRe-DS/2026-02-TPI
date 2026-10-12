@@ -1,5 +1,7 @@
 package ar.edu.utn.frre.m3.adapter.rest;
 
+import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
+import ar.edu.utn.frre.m3.application.exception.DriverAlreadyExistsException;
 import ar.edu.utn.frre.m3.domain.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
@@ -8,12 +10,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,6 +27,43 @@ import java.util.UUID;
 public class GlobalRestExceptionHandler {
 
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
+
+    @ExceptionHandler(DriverAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleDriverAlreadyExists(DriverAlreadyExistsException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setType(URI.create("https://utn.edu.ar/errors/driver-already-exists"));
+        problem.setTitle("Conflicto de identidad de conductor");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_ALREADY_EXISTS");
+        problem.setProperty("correlationId", correlationId);
+        problem.setProperty("identitySubject", ex.getIdentitySubject());
+        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
+    }
+
+    @ExceptionHandler(DriverAccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(DriverAccessDeniedException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setType(URI.create("urn:problem-type:access-denied"));
+        problem.setTitle("Acceso denegado");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "ACCESS_DENIED");
+        problem.setProperty("correlationId", correlationId);
+        return buildResponse(HttpStatus.FORBIDDEN, problem, correlationId);
+    }
+
+    @ExceptionHandler(ar.edu.utn.frre.m3.application.exception.DriverNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleAppDriverNotFound(ar.edu.utn.frre.m3.application.exception.DriverNotFoundException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setType(URI.create("urn:problem-type:driver-not-found"));
+        problem.setTitle("Conductor no encontrado");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_NOT_FOUND");
+        problem.setProperty("correlationId", correlationId);
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
+    }
 
     @ExceptionHandler(PreconditionRequiredException.class)
     public ResponseEntity<ProblemDetail> handlePreconditionRequired(PreconditionRequiredException ex, HttpServletRequest request) {
@@ -49,6 +91,66 @@ public class GlobalRestExceptionHandler {
         return buildResponse(HttpStatus.PRECONDITION_FAILED, problem, correlationId);
     }
 
+    // ── HU-10: Availability Intent exceptions ─────────────────────────────────
+
+    @ExceptionHandler(ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleDriverNotFound(
+            ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:driver-not-found"));
+        problem.setTitle("Driver Not Found");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_NOT_FOUND");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
+    }
+
+    @ExceptionHandler(DriverNotQualifiedException.class)
+    public ResponseEntity<ProblemDetail> handleDriverNotQualified(
+            DriverNotQualifiedException ex,
+            HttpServletRequest request
+    ) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:driver-not-qualified"));
+        problem.setTitle("Driver Not Qualified");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_NOT_QUALIFIED");
+        problem.setProperty("reason", ex.getReason());
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, problem, correlationId);
+    }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<ProblemDetail> handleIdempotencyConflict(
+            IdempotencyConflictException ex,
+            HttpServletRequest request
+    ) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("correlationId", correlationId);
+
+        if (request.getRequestURI() != null && request.getRequestURI().contains("availability-intent")) {
+            problem.setType(URI.create("urn:m3:problem:idempotency-conflict"));
+            problem.setTitle("Idempotency Key Conflict");
+            problem.setProperty("code", "IDEMPOTENCY_CONFLICT");
+        } else {
+            problem.setType(URI.create("urn:m3:problem:conflict"));
+            problem.setTitle("Idempotency Conflict");
+            problem.setProperty("code", "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        }
+
+        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
+    }
+
+    // ── Existing handlers ─────────────────────────────────────────────────────
+
     @ExceptionHandler(VehicleNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleVehicleNotFound(VehicleNotFoundException ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
@@ -57,19 +159,6 @@ public class GlobalRestExceptionHandler {
         problem.setTitle("Vehicle Not Found");
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", "VEHICLE_NOT_FOUND");
-        problem.setProperty("correlationId", correlationId);
-
-        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
-    }
-
-    @ExceptionHandler({DriverNotFoundException.class, DocumentNotFoundException.class})
-    public ResponseEntity<ProblemDetail> handleNotFound(RuntimeException ex, HttpServletRequest request) {
-        String correlationId = resolveCorrelationId(request);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-        problem.setType(URI.create("urn:m3:problem:not-found"));
-        problem.setTitle("Resource Not Found");
-        problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "RESOURCE_NOT_FOUND");
         problem.setProperty("correlationId", correlationId);
 
         return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
@@ -88,17 +177,17 @@ public class GlobalRestExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, problem, correlationId);
     }
 
-    @ExceptionHandler(IdempotencyConflictException.class)
-    public ResponseEntity<ProblemDetail> handleIdempotencyConflict(IdempotencyConflictException ex, HttpServletRequest request) {
+    @ExceptionHandler(DocumentNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleDocumentNotFound(DocumentNotFoundException ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        problem.setType(URI.create("urn:m3:problem:conflict"));
-        problem.setTitle("Conflict");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:not-found"));
+        problem.setTitle("Document Not Found");
         problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        problem.setProperty("code", "RESOURCE_NOT_FOUND");
         problem.setProperty("correlationId", correlationId);
 
-        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
     }
 
     @ExceptionHandler(InvalidDocumentPeriodException.class)
@@ -117,24 +206,29 @@ public class GlobalRestExceptionHandler {
     @ExceptionHandler(DomainValidationException.class)
     public ResponseEntity<ProblemDetail> handleDomainValidation(DomainValidationException ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
-        problem.setType(URI.create("urn:m3:problem:business-rule-violation"));
-        problem.setTitle("Unprocessable Entity");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:bad-request"));
+        problem.setTitle("Bad Request");
         problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "UNPROCESSABLE_ENTITY");
+        problem.setProperty("code", "DOMAIN_VALIDATION_ERROR");
         problem.setProperty("correlationId", correlationId);
 
-        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, problem, correlationId);
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed");
-        problem.setType(URI.create("urn:m3:problem:validation"));
-        problem.setTitle("Validation Error");
+        boolean isDriverEndpoint = request.getRequestURI() != null && request.getRequestURI().endsWith("/api/v1/drivers");
+        String code = isDriverEndpoint ? "VALIDATION_FAILED" : "VALIDATION_ERROR";
+        String title = isDriverEndpoint ? "Error de validación en la solicitud" : "Validation Error";
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                isDriverEndpoint ? "La solicitud contiene datos inválidos o incompletos" : "Request validation failed");
+        problem.setType(URI.create(isDriverEndpoint ? "https://utn.edu.ar/errors/validation-error" : "urn:m3:problem:validation"));
+        problem.setTitle(title);
         problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "VALIDATION_ERROR");
+        problem.setProperty("code", code);
         problem.setProperty("correlationId", correlationId);
 
         List<Map<String, String>> errors = ex.getBindingResult().getFieldErrors().stream()
@@ -144,6 +238,27 @@ public class GlobalRestExceptionHandler {
                 ))
                 .toList();
         problem.setProperty("errors", errors);
+
+        Map<String, String> invalidFields = new HashMap<>();
+        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
+            invalidFields.put(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+        problem.setProperty("invalidFields", invalidFields);
+
+        return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String correlationId = resolveCorrelationId(request);
+        String detail = String.format("El parámetro '%s' con valor '%s' no tiene el formato válido esperado.",
+                ex.getName(), ex.getValue());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setType(URI.create("urn:problem-type:bad-request"));
+        problem.setTitle("Parámetro inválido");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "INVALID_PARAMETER_FORMAT");
+        problem.setProperty("correlationId", correlationId);
 
         return buildResponse(HttpStatus.BAD_REQUEST, problem, correlationId);
     }

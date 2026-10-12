@@ -11,10 +11,10 @@
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Navegación principal">
-      <a class="brand" th:href="@{/ui}"><span class="brand-mark">M3</span><span>Conductores<small>y vehículos</small></span></a>
+      <a class="brand" th:href="@{/ui/preview}"><span class="brand-mark">M3</span><span>Conductores<small>y vehículos</small></span></a>
       <div class="sidebar-group-label">MI ESPACIO</div>
       <nav class="side-nav">
-        <a th:href="@{/ui}" th:classappend="${page == 'home'} ? 'active'" th:attr="aria-current=${page == 'home'} ? 'page'"><span class="nav-icon">⌂</span> Inicio</a>
+        <a th:href="@{/ui/preview}" th:classappend="${page == 'home'} ? 'active'" th:attr="aria-current=${page == 'home'} ? 'page'"><span class="nav-icon">⌂</span> Inicio</a>
         <a th:href="@{/ui/profile}" th:classappend="${page == 'profile'} ? 'active'" th:attr="aria-current=${page == 'profile'} ? 'page'"><span class="nav-icon">◉</span> Mi perfil</a>
         <a th:href="@{/ui/vehicles}" th:classappend="${page == 'vehicles'} ? 'active'" th:attr="aria-current=${page == 'vehicles'} ? 'page'"><span class="nav-icon">▤</span> Vehículos</a>
         <a th:href="@{/ui/documents}" th:classappend="${page == 'documents'} ? 'active'" th:attr="aria-current=${page == 'documents'} ? 'page'"><span class="nav-icon">▣</span> Documentación</a>
