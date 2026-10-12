@@ -1,8 +1,17 @@
+# Documentación y consignas locales del alumno
+tpi_hu_arquitectura/
+
+# Artefactos de compilación Maven
 target/
 .vscode/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+# Variables de entorno y secretos
+.env
+.env.local
+*.env
 
 ### STS ###
 .apt_generated
@@ -32,13 +41,14 @@ build/
 
 ### VS Code ###
 .vscode/
+*.code-workspace
 
 ### Logs & Temp ###
 *.log
 *.tmp
-*.swp
+*.bak
 *~
-.env
+*.swp
 
 ### OS files ###
 .DS_Store

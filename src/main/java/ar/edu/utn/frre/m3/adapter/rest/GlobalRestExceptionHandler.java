@@ -91,6 +91,66 @@ public class GlobalRestExceptionHandler {
         return buildResponse(HttpStatus.PRECONDITION_FAILED, problem, correlationId);
     }
 
+    // ── HU-10: Availability Intent exceptions ─────────────────────────────────
+
+    @ExceptionHandler(ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleDriverNotFound(
+            ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:driver-not-found"));
+        problem.setTitle("Driver Not Found");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_NOT_FOUND");
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
+    }
+
+    @ExceptionHandler(DriverNotQualifiedException.class)
+    public ResponseEntity<ProblemDetail> handleDriverNotQualified(
+            DriverNotQualifiedException ex,
+            HttpServletRequest request
+    ) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setType(URI.create("urn:m3:problem:driver-not-qualified"));
+        problem.setTitle("Driver Not Qualified");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("code", "DRIVER_NOT_QUALIFIED");
+        problem.setProperty("reason", ex.getReason());
+        problem.setProperty("correlationId", correlationId);
+
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, problem, correlationId);
+    }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<ProblemDetail> handleIdempotencyConflict(
+            IdempotencyConflictException ex,
+            HttpServletRequest request
+    ) {
+        String correlationId = resolveCorrelationId(request);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("correlationId", correlationId);
+
+        if (request.getRequestURI() != null && request.getRequestURI().contains("availability-intent")) {
+            problem.setType(URI.create("urn:m3:problem:idempotency-conflict"));
+            problem.setTitle("Idempotency Key Conflict");
+            problem.setProperty("code", "IDEMPOTENCY_CONFLICT");
+        } else {
+            problem.setType(URI.create("urn:m3:problem:conflict"));
+            problem.setTitle("Idempotency Conflict");
+            problem.setProperty("code", "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        }
+
+        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
+    }
+
+    // ── Existing handlers ─────────────────────────────────────────────────────
+
     @ExceptionHandler(VehicleNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleVehicleNotFound(VehicleNotFoundException ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
@@ -130,19 +190,6 @@ public class GlobalRestExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
     }
 
-    @ExceptionHandler(ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleDriverNotFound(ar.edu.utn.frre.m3.domain.exception.DriverNotFoundException ex, HttpServletRequest request) {
-        String correlationId = resolveCorrelationId(request);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-        problem.setType(URI.create("urn:m3:problem:not-found"));
-        problem.setTitle("Driver Not Found");
-        problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "DRIVER_NOT_FOUND");
-        problem.setProperty("correlationId", correlationId);
-
-        return buildResponse(HttpStatus.NOT_FOUND, problem, correlationId);
-    }
-
     @ExceptionHandler(InvalidDocumentPeriodException.class)
     public ResponseEntity<ProblemDetail> handleInvalidPeriod(InvalidDocumentPeriodException ex, HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
@@ -154,19 +201,6 @@ public class GlobalRestExceptionHandler {
         problem.setProperty("correlationId", correlationId);
 
         return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, problem, correlationId);
-    }
-
-    @ExceptionHandler(IdempotencyConflictException.class)
-    public ResponseEntity<ProblemDetail> handleIdempotencyConflict(IdempotencyConflictException ex, HttpServletRequest request) {
-        String correlationId = resolveCorrelationId(request);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        problem.setType(URI.create("urn:m3:problem:conflict"));
-        problem.setTitle("Idempotency Conflict");
-        problem.setInstance(URI.create(request.getRequestURI()));
-        problem.setProperty("code", "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
-        problem.setProperty("correlationId", correlationId);
-
-        return buildResponse(HttpStatus.CONFLICT, problem, correlationId);
     }
 
     @ExceptionHandler(DomainValidationException.class)

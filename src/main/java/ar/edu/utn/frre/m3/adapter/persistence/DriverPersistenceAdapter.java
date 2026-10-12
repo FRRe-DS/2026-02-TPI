@@ -2,9 +2,11 @@ package ar.edu.utn.frre.m3.adapter.persistence;
 
 import ar.edu.utn.frre.m3.adapter.persistence.entity.DriverJpaEntity;
 import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataDriverRepository;
+import ar.edu.utn.frre.m3.adapter.persistence.repository.SpringDataVehicleRepository;
 import ar.edu.utn.frre.m3.application.port.DriverRepository;
 import ar.edu.utn.frre.m3.application.port.out.DriverRepositoryPort;
 import ar.edu.utn.frre.m3.domain.Driver;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +25,15 @@ public class DriverPersistenceAdapter implements DriverRepository, DriverReposit
 
     private final SpringDataDriverRepository springDataRepository;
     private final DriverMapper driverMapper;
+    private final SpringDataVehicleRepository vehicleRepository;
 
+    @Autowired
     public DriverPersistenceAdapter(SpringDataDriverRepository springDataRepository,
-                                  DriverMapper driverMapper) {
+                                  DriverMapper driverMapper,
+                                  @Autowired(required = false) SpringDataVehicleRepository vehicleRepository) {
         this.springDataRepository = Objects.requireNonNull(springDataRepository, "springDataRepository es requerido");
         this.driverMapper = Objects.requireNonNull(driverMapper, "driverMapper es requerido");
+        this.vehicleRepository = vehicleRepository;
     }
 
     @Override
@@ -71,5 +77,31 @@ public class DriverPersistenceAdapter implements DriverRepository, DriverReposit
         return springDataRepository.findAll().stream()
                 .map(driverMapper::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsById(UUID driverId) {
+        return springDataRepository.existsById(driverId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isApproved(UUID driverId) {
+        return springDataRepository.findById(driverId)
+                .map(d -> "APPROVED".equalsIgnoreCase(d.getQualificationStatus()))
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasOwnQualifiedVehicle(UUID driverId, UUID vehicleId) {
+        if (vehicleRepository == null) {
+            return true;
+        }
+        return vehicleRepository.findById(vehicleId)
+                .map(v -> v.getDriverId().equals(driverId) &&
+                          "APPROVED".equalsIgnoreCase(v.getQualificationStatus()))
+                .orElse(false);
     }
 }

@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: clonuber/m3-drivers-vehicles:0.2.0
-    container_name: m3_drivers_vehicles
+    container_name: m3-app
     restart: unless-stopped
     ports:
       - "3003:3003"
@@ -19,6 +19,8 @@ services:
       OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-m3-web-secret}
       INTEGRATION_MODE: ${INTEGRATION_MODE:-local}
       SPRING_PROFILES_ACTIVE: docker
+      M4_BASE_URL: ${M4_BASE_URL:-http://localhost:4004}
+      M6_BASE_URL: ${M6_BASE_URL:-http://localhost:6006}
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,6 +44,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - m3_network
 
