@@ -1,5 +1,5 @@
 -- =============================================================
--- Migration V2: Availability intents, audit log, outbox,
+-- Migration V4: Availability intents, audit log, outbox,
 --               and idempotency records (HU-10)
 -- =============================================================
 
@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS audit_log (
     changes         TEXT
 );
 
+-- Compatibilidad si audit_log ya existía previamente en V1/V2
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_type     VARCHAR(80);
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_id       UUID;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS operation       VARCHAR(80);
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor           VARCHAR(200);
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS correlation_id  VARCHAR(100);
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS occurred_at     TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS changes         TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_audit_log_entity
     ON audit_log (entity_type, entity_id);
 
@@ -73,7 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_occurred_at
 -- Expanded to events in E2.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS outbox (
-    id              UUID        PRIMARY KEY,
+    id              UUID         PRIMARY KEY,
     destination     VARCHAR(200) NOT NULL,   -- e.g. M4 availability-intent endpoint
     message_type    VARCHAR(100) NOT NULL,
     aggregate_type  VARCHAR(80)  NOT NULL,
@@ -102,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_outbox_status_next
 -- Retention: 7 days (enforced by a scheduled cleanup job).
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS idempotency_records (
-    id              UUID        PRIMARY KEY,
+    id              UUID         PRIMARY KEY,
     principal       VARCHAR(200) NOT NULL,
     http_method     VARCHAR(10)  NOT NULL,
     path            VARCHAR(500) NOT NULL,
@@ -116,6 +125,17 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
     CONSTRAINT idempotency_uq
         UNIQUE (principal, http_method, path, idempotency_key)
 );
+
+-- Compatibilidad si idempotency_records ya existía previamente en V1/V2
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS principal       VARCHAR(200);
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS http_method     VARCHAR(10);
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS path            VARCHAR(500);
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(200);
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS request_hash    VARCHAR(64);
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS response_status INTEGER;
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS response_body   TEXT;
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS created_at      TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS expires_at      TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_idempotency_expires_at
     ON idempotency_records (expires_at);
