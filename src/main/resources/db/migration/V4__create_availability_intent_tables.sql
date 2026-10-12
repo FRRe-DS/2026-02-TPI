@@ -1,5 +1,5 @@
 -- =============================================================
--- Migration V4: Availability intents, audit log, outbox,
+-- Migration V2: Availability intents, audit log, outbox,
 --               and idempotency records (HU-10)
 -- =============================================================
 
@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log (created_at);
 -- Expanded to events in E2.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS outbox (
-    id              UUID         PRIMARY KEY,
+    id              UUID        PRIMARY KEY,
     destination     VARCHAR(200) NOT NULL,   -- e.g. M4 availability-intent endpoint
     message_type    VARCHAR(100) NOT NULL,
     aggregate_type  VARCHAR(80)  NOT NULL,
