@@ -19,7 +19,8 @@ public interface AuditLogRepository {
      * @param operation     e.g. "CREATE_INTENT" or "UPDATE_INTENT"
      * @param actor         Principal identifier (driverId, system, etc.)
      * @param correlationId Request/trace correlation identifier
-     * @param changes       Non-sensitive description of changes (JSON or plain text)
+     * @param changes       Non-sensitive description of changes (JSON or plain
+     *                      text)
      */
     default void append(
             String entityType,
@@ -39,7 +40,6 @@ public interface AuditLogRepository {
                 null,
                 changes,
                 correlationId,
-                Instant.now()
-        ));
+                Instant.now()));
     }
 }

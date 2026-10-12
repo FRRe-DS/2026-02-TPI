@@ -7,7 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Puerto de repositorio para el agregado Driver según la arquitectura hexagonal de M3.
+ * Puerto de repositorio para el agregado Driver según la arquitectura hexagonal
+ * de M3.
  */
 public interface DriverRepository {
 
@@ -36,7 +37,8 @@ public interface DriverRepository {
     boolean isApproved(UUID driverId);
 
     /**
-     * Returns true if the given vehicle exists, is APPROVED, and belongs to the driver.
+     * Returns true if the given vehicle exists, is APPROVED, and belongs to the
+     * driver.
      */
     boolean hasOwnQualifiedVehicle(UUID driverId, UUID vehicleId);
 }

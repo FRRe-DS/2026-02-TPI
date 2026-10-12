@@ -1,7 +1,8 @@
 package ar.edu.utn.frre.m3.domain.exception;
 
 /**
- * Thrown when an {@code Idempotency-Key} is reused with a different request body.
+ * Thrown when an {@code Idempotency-Key} is reused with a different request
+ * body.
  * Maps to HTTP 409 Conflict.
  */
 public class IdempotencyConflictException extends RuntimeException {

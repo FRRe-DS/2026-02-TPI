@@ -22,7 +22,8 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Spring configuration providing Application Use Case beans for M3.
- * Follows Hexagonal Architecture: use cases are wired manually as plain Java beans.
+ * Follows Hexagonal Architecture: use cases are wired manually as plain Java
+ * beans.
  */
 @Configuration
 public class ApplicationUseCaseConfig {
@@ -38,9 +39,8 @@ public class ApplicationUseCaseConfig {
 
     @Bean
     public RegisterDriverLicenseUseCase registerDriverLicenseUseCase(
-        DriverRepository driverRepository, DocumentRepository documentRepository,
-        UnitOfWork unitOfWork, IdempotencyRepository idempotencyRepository
-    ) {
+            DriverRepository driverRepository, DocumentRepository documentRepository,
+            UnitOfWork unitOfWork, IdempotencyRepository idempotencyRepository) {
         return new RegisterDriverLicenseService(driverRepository, documentRepository,
                 unitOfWork, idempotencyRepository);
     }
@@ -49,15 +49,13 @@ public class ApplicationUseCaseConfig {
 
     @Bean
     public RegisterVehicleDocumentUseCase registerVehicleDocumentUseCase(
-        DocumentRepository documentRepository,
-        VehicleRepository vehicleRepository,
-        UnitOfWork unitOfWork
-    ) {
+            DocumentRepository documentRepository,
+            VehicleRepository vehicleRepository,
+            UnitOfWork unitOfWork) {
         return new RegisterVehicleDocumentService(
-            documentRepository,
-            vehicleRepository,
-            unitOfWork
-        );
+                documentRepository,
+                vehicleRepository,
+                unitOfWork);
     }
 
     // ─── HU-03: Vehicle Query / Vehicles ─────────────────────────────────────
@@ -71,22 +69,20 @@ public class ApplicationUseCaseConfig {
 
     @Bean
     public RequestAvailabilityUseCase requestAvailabilityUseCase(
-        DriverRepository driverRepository,
-        AvailabilityIntentRepository availabilityIntentRepository,
-        AuditLogRepository auditLogRepository,
-        OutboxRepository outboxRepository,
-        IdempotencyRepository idempotencyRepository,
-        UnitOfWork unitOfWork,
-        Clock systemClock
-    ) {
+            DriverRepository driverRepository,
+            AvailabilityIntentRepository availabilityIntentRepository,
+            AuditLogRepository auditLogRepository,
+            OutboxRepository outboxRepository,
+            IdempotencyRepository idempotencyRepository,
+            UnitOfWork unitOfWork,
+            Clock systemClock) {
         return new RequestAvailabilityService(
-            driverRepository,
-            availabilityIntentRepository,
-            auditLogRepository,
-            outboxRepository,
-            idempotencyRepository,
-            unitOfWork,
-            systemClock
-        );
+                driverRepository,
+                availabilityIntentRepository,
+                auditLogRepository,
+                outboxRepository,
+                idempotencyRepository,
+                unitOfWork,
+                systemClock);
     }
 }
