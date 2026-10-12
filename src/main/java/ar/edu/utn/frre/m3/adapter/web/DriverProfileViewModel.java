@@ -68,7 +68,7 @@ public record DriverProfileViewModel(
         };
 
         String guidance = switch (driver.getStatus()) {
-            case APPROVED -> "¡Felicitaciones! Tu perfil se encuentra formalmente habilitado para prestar servicios y conectarte.";
+            case APPROVED -> "Tu perfil está aprobado. Consultá Habilitación para verificar también el vehículo y la documentación.";
             case PENDING -> "Tu solicitud de habilitación se encuentra en revisión administrativa por nuestro equipo de operadores.";
             case OBSERVED -> "Tu perfil o documentación presenta observaciones que debes subsanar para poder continuar con la habilitación.";
             case SUSPENDED -> "Tu perfil se encuentra temporalmente suspendido por razones administrativas. Comunícate con soporte.";

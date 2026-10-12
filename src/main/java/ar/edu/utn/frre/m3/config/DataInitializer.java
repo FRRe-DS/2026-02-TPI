@@ -20,7 +20,7 @@ import java.util.UUID;
  * Carga perfiles con los distintos estados de habilitación previstos en el negocio (HU-02).
  */
 @Component
-@Profile("!test")
+@Profile("demo")
 public class DataInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);

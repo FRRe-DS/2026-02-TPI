@@ -26,7 +26,9 @@ public class VehicleMapper {
             entity.getModelYear(),
             entity.getQualificationStatus(),
             entity.getDriverVersion(),
-            entity.getCreatedAt()
+            entity.getCreatedAt(), entity.getColor(), entity.getCapacity(),
+            entity.getServiceCategories() == null || entity.getServiceCategories().isBlank()
+                ? java.util.Set.of() : new java.util.HashSet<>(java.util.Arrays.asList(entity.getServiceCategories().split(",")))
         );
     }
 }

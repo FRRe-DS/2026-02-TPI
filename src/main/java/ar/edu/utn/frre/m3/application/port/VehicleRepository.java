@@ -10,6 +10,8 @@ import java.util.UUID;
  */
 public interface VehicleRepository {
 
+    Vehicle save(Vehicle vehicle);
+
     Optional<Vehicle> findById(UUID vehicleId);
 
     List<Vehicle> findByDriverId(UUID driverId);

@@ -53,3 +53,7 @@ build/
 ### OS files ###
 .DS_Store
 Thumbs.db
+
+# Local persistent demo data
+/data/
+/.local/

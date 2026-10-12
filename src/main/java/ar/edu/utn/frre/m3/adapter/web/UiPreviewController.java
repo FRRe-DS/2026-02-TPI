@@ -26,28 +26,28 @@ public class UiPreviewController {
     @GetMapping("/ui/preview/profile")
     public String profile(Model model) { return page(model, "profile", "Mi perfil"); }
 
-    @GetMapping("/ui/vehicles")
+    @GetMapping("/ui/preview/vehicles")
     public String vehicles(Model model) { return page(model, "vehicles", "Vehículos"); }
 
-    @GetMapping("/ui/documents")
+    @GetMapping("/ui/preview/documents")
     public String documents(Model model) { return page(model, "documents", "Documentación"); }
 
     @GetMapping("/ui/preview/qualification")
     public String qualification(Model model) { return page(model, "qualification", "Habilitación"); }
 
-    @GetMapping("/ui/availability")
+    @GetMapping("/ui/preview/availability")
     public String availability(Model model) { return page(model, "availability", "Disponibilidad"); }
 
-    @GetMapping("/ui/customer-ratings")
+    @GetMapping("/ui/preview/customer-ratings")
     public String ratings(Model model) { return page(model, "ratings", "Valoraciones"); }
 
-    @GetMapping("/ui/operator/drivers")
+    @GetMapping("/ui/preview/operator/drivers")
     public String operatorDrivers(Model model) {
         model.addAttribute("drivers", DRIVERS);
         return page(model, "operator", "Conductores");
     }
 
-    @GetMapping("/ui/operator/drivers/{driverId}")
+    @GetMapping("/ui/preview/operator/drivers/{driverId}")
     public String operatorDetail(@PathVariable UUID driverId, Model model) {
         model.addAttribute("selectedDriver", DRIVERS.stream()
                 .filter(driver -> driver.get("id").equals(driverId.toString()))

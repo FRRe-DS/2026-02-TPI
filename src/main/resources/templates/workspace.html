@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${title} + ' · M3'">M3</title><link rel="stylesheet" th:href="@{/css/workspace.css}"></head>
+<body>
+<nav th:fragment="navigation" class="workspace-nav" aria-label="Navegación principal">
+<a class="brand" href="/ui">M3 · Conductores</a><a href="/ui/profile">Mi perfil</a><a href="/ui/vehicles">Vehículos</a>
+<a href="/ui/documents">Documentación</a><a href="/ui/qualification">Habilitación</a><a href="/ui/availability">Disponibilidad</a>
+<a href="/ui/operator/drivers">Operadores</a></nav>
+<main class="workspace-main"><header><p class="eyebrow">CONDUCTORES Y VEHÍCULOS</p><h1 th:text="${title}"></h1></header>
+<p th:if="${success}" class="notice success" role="status" th:text="${success}"></p>
+<p th:if="${error}" class="notice error" role="alert" th:text="${error}"></p>
+<section th:if="${page == 'register'}" class="panel"><p>Creá el perfil asociado a tu sesión actual.</p>
+<form method="post" th:action="@{/ui/register}"><label>Nombre completo<input name="name" required maxlength="100"></label><button>Crear perfil</button></form></section>
+<section th:if="${page == 'vehicles'}">
+<div class="panel"><h2>Vehículos registrados</h2><p th:if="${#lists.isEmpty(vehicles)}">Todavía no registraste vehículos.</p>
+<div class="cards"><article th:each="v : ${vehicles}" class="vehicle"><span class="badge" th:text="${v.qualificationStatus}"></span>
+<h3 th:text="${v.make + ' ' + v.model}"></h3><p th:text="${v.plate + ' · ' + v.modelYear + ' · ' + v.vehicleType}"></p>
+<p th:if="${v.color != null}" th:text="${v.color + ' · ' + v.capacity + ' pasajeros'}"></p>
+<p th:unless="${#sets.isEmpty(v.serviceCategories)}" th:text="${v.serviceCategories}"></p>
+<a href="/ui/documents">Gestionar documentación</a></article></div></div>
+<div class="panel"><h2>Registrar vehículo</h2><p>Completá sus datos y elegí los servicios que ofrece.</p>
+<a class="button" href="/ui/vehicles/register">Registrar auto o moto</a></div></section>
+<section th:if="${page == 'documents'}"><div class="panel"><h2>Licencia de conducir</h2>
+<p>Registrá o renová tu licencia y consultá todas sus revisiones.</p>
+<a class="button" th:href="@{/ui/drivers/{id}/documents(id=${driver.id})}">Gestionar licencia</a></div>
+<div class="panel"><h2>Documentación del vehículo</h2><p th:if="${#lists.isEmpty(vehicles)}">Primero <a href="/ui/vehicles">registrá un vehículo</a>.</p>
+<form th:unless="${#lists.isEmpty(vehicles)}" method="post" th:action="@{/ui/documents/vehicle}" class="form-grid">
+<label>Vehículo<select name="vehicleId" required><option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.plate + ' · ' + v.make}"></option></select></label>
+<label>Documento<select name="documentType"><option value="INSURANCE">Seguro</option><option value="VEHICLE_REGISTRATION">Cédula del vehículo</option></select></label>
+<label>Número<input name="documentNumber" maxlength="80" required></label><label>Entidad emisora<input name="issuingEntity" maxlength="100"></label>
+<label>Emisión<input name="issuedAt" type="date" required></label><label>Vencimiento<input name="validUntil" type="date" required></label>
+<button type="submit">Registrar documento</button></form></div>
+<div class="panel" th:replace="~{workspace :: documentHistory}"></div></section>
+<section th:if="${page == 'availability'}"><div class="panel"><h2>Estado de tu solicitud</h2>
+<p th:if="${intent == null}">Todavía no enviaste una solicitud de disponibilidad.</p>
+<div th:if="${intent != null}"><p>Sincronización: <strong th:text="${intent.status}"></strong></p>
+<p th:text="${intent.connected ? 'Conexión solicitada' : 'Desconexión solicitada'}"></p>
+<p th:text="${intent.available ? 'Disponibilidad solicitada' : 'No disponible'}"></p></div>
+<p class="notice">La solicitud se guarda en M3. La disponibilidad efectiva requiere la confirmación de M4.</p></div>
+<div class="panel"><h2>Cambiar disponibilidad</h2><p>El conductor y el vehículo deben estar aprobados.</p>
+<p th:if="${#lists.isEmpty(vehicles)}">Primero <a href="/ui/vehicles">registrá un vehículo</a>.</p>
+<form th:unless="${#lists.isEmpty(vehicles)}" method="post" th:action="@{/ui/availability}">
+<input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
+<label>Vehículo<select name="vehicleId" required><option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.plate + ' · ' + v.qualificationStatus}"></option></select></label>
+<label class="check"><input type="checkbox" name="connected" value="true" th:checked="${intent != null and intent.connected}"> Quiero conectarme</label>
+<label class="check"><input type="checkbox" name="available" value="true" th:checked="${intent != null and intent.available}"> Quiero recibir viajes</label>
+<button type="submit">Guardar solicitud</button></form></div></section>
+<section th:if="${page == 'operator'}" class="panel"><h2>Perfiles registrados</h2>
+<p th:if="${#lists.isEmpty(drivers)}">No hay conductores registrados.</p><div class="table-wrap"><table><thead><tr><th>Conductor</th><th>Estado</th><th>Acción</th></tr></thead>
+<tbody><tr th:each="d : ${drivers}"><td th:text="${d.displayName}"></td><td th:text="${d.qualificationStatus}"></td>
+<td><a th:href="@{/ui/operator/drivers/{id}(id=${d.id})}">Ver y revisar documentos</a></td></tr></tbody></table></div></section>
+<section th:if="${page == 'operator-detail'}"><div class="panel"><h2 th:text="${driver.displayName}"></h2><p th:text="${driver.qualificationStatus}"></p>
+<a href="/ui/operator/drivers">Volver a conductores</a></div><div th:replace="~{workspace :: documentHistory}"></div>
+<div class="panel"><h2>Revisar documentación actual</h2><p th:if="${#lists.isEmpty(documents)}">No hay documentos para revisar.</p>
+<article th:each="d : ${documents}" th:if="${d.current}" class="review"><h3 th:text="${d.documentType + ' · revisión ' + d.revision}"></h3>
+<form method="post" th:action="@{/ui/operator/drivers/{id}/documents/{doc}/review(id=${driver.id},doc=${d.id})}" class="form-grid">
+<input type="hidden" name="version" th:value="${driver.version}"><label>Decisión<select name="decision"><option value="APPROVED">Aprobar</option><option value="OBSERVED">Observar</option><option value="REJECTED">Rechazar</option></select></label>
+<label>Motivo de la decisión<input name="reason" maxlength="500" required></label><button>Guardar revisión</button></form></article></div></section>
+<section th:if="${page == 'ratings'}" class="panel"><p>Las valoraciones se incorporarán en la entrega E2. Todavía no hay un servicio conectado para registrarlas.</p></section>
+<section th:if="${page == 'error'}" class="panel"><a href="/ui/register">Crear mi perfil</a> · <a href="/ui">Volver al inicio</a></section>
+</main>
+<th:block th:if="${false}"><div th:fragment="documentHistory" class="panel"><h2>Historial de documentos</h2>
+<p th:if="${#lists.isEmpty(documents)}">No hay documentos registrados.</p><div class="table-wrap" th:unless="${#lists.isEmpty(documents)}">
+<table><thead><tr><th>Tipo</th><th>Revisión</th><th>Estado</th><th>Vencimiento (exclusivo)</th><th>Actual</th></tr></thead>
+<tbody><tr th:each="d : ${documents}"><td th:text="${d.documentType}"></td><td th:text="${d.revision}"></td><td th:text="${d.status}"></td>
+<td th:text="${d.validUntil}"></td><td th:text="${d.current ? 'Sí' : 'No'}"></td></tr></tbody></table></div></div></th:block>
+</body></html>

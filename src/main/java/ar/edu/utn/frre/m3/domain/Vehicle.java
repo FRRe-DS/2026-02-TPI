@@ -20,6 +20,9 @@ public class Vehicle {
     private final String qualificationStatus;
     private final Long driverVersion;
     private final Instant createdAt;
+    private final String color;
+    private final Integer capacity;
+    private final Set<String> serviceCategories;
 
     // Constructor compatible con HU-06
     public Vehicle(UUID id, UUID driverId) {
@@ -40,6 +43,17 @@ public class Vehicle {
         Long driverVersion,
         Instant createdAt
     ) {
+        this(id, driverId, vehicleType, serviceTypes, countryCode, plate, make, model, modelYear,
+            qualificationStatus, driverVersion, createdAt, null, null, Set.of());
+    }
+
+    public Vehicle(UUID id, UUID driverId, String vehicleType, Set<String> serviceTypes,
+            String countryCode, String plate, String make, String model, Integer modelYear,
+            String qualificationStatus, Long driverVersion, Instant createdAt,
+            String color, Integer capacity, Set<String> serviceCategories) {
+        this.color = color;
+        this.capacity = capacity;
+        this.serviceCategories = serviceCategories == null ? Set.of() : Set.copyOf(serviceCategories);
         this.id = Objects.requireNonNull(id, "vehicle id cannot be null");
         this.driverId = Objects.requireNonNull(driverId, "driver id cannot be null");
         this.vehicleType = vehicleType;
@@ -54,6 +68,9 @@ public class Vehicle {
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
+    public String getColor() { return color; }
+    public Integer getCapacity() { return capacity; }
+    public Set<String> getServiceCategories() { return serviceCategories; }
     public UUID getId() { return id; }
     public UUID getDriverId() { return driverId; }
     public String getVehicleType() { return vehicleType; }

@@ -36,7 +36,7 @@ public class DriverProfileWebController {
         this.getDriverProfileUseCase = Objects.requireNonNull(getDriverProfileUseCase, "getDriverProfileUseCase es requerido");
     }
 
-    @GetMapping
+    @GetMapping({"", "/"})
     public String index() {
         return "redirect:/ui/profile";
     }

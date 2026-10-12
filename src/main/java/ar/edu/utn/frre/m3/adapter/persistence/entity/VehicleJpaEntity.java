@@ -58,6 +58,19 @@ public class VehicleJpaEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "color", length = 30)
+    private String color;
+    @Column(name = "capacity")
+    private Integer capacity;
+    @Column(name = "service_categories", length = 100)
+    private String serviceCategories;
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+    public Integer getCapacity() { return capacity; }
+    public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public String getServiceCategories() { return serviceCategories; }
+    public void setServiceCategories(String categories) { this.serviceCategories = categories; }
+
     public VehicleJpaEntity() {
     }
 

@@ -30,7 +30,7 @@ class DriverLicensePostgresTest {
         registry.add("spring.datasource.url", () -> System.getenv("M3_PG_TEST_URL"));
         registry.add("spring.datasource.username", () -> System.getenv().getOrDefault("M3_PG_TEST_USER", "m3_user"));
         registry.add("spring.datasource.password", () -> System.getenv().getOrDefault("M3_PG_TEST_PASSWORD", "m3_password"));
-        registry.add("spring.flyway.enabled", () -> false);
+        registry.add("spring.flyway.enabled", () -> true);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 

@@ -9,20 +9,75 @@ Repositorio del módulo M3 del TPI Desarrollo de Software 2026.
 - Thymeleaf / Bootstrap 5
 - Docker & Docker Compose
 
-## Vista previa de todas las pantallas web
+## Frontend integrado con persistencia
 
-Con la aplicación en ejecución, abrí `http://localhost:3003/ui`. La navegación incluye
-inicio, perfil, vehículos, documentación, habilitación, disponibilidad,
-valoraciones E2, listado de operadores y detalle de conductor. Las rutas están
-implementadas con Spring MVC y Thymeleaf; CSS y JavaScript se sirven localmente.
+La integración parte de `main` (`b804907`, PR #9). El formulario de HU-03
+incorporado desde `HU3-Aplicacion` ahora utiliza los casos de uso y PostgreSQL
+de M3: guarda marca, modelo, año, patente, color, capacidad y categorías de
+servicio. `AUTO`/`MOTO` siguen representando el tipo habilitado por la licencia;
+`STANDARD`, `PREMIUM`, `DELIVERY` y `PETS` son categorías comerciales separadas.
+La aplicación independiente en `HU3-Aplicacion` conserva su versión original;
+para usar el flujo integrado, iniciar el proyecto raíz y abrir `/ui`.
 
-La interfaz de estas rutas es una **vista previa con datos de ejemplo**, indicados
-en cada pantalla. Los formularios sin caso de uso integrado están deshabilitados:
-no simulan guardados ni decisiones reales. La pantalla existente para registrar
-licencias de un conductor real continúa en `/ui/drivers/{driverId}/documents`.
-El perfil de prueba puede ejecutarse con
-`sh mvnw -Dspring-boot.run.profiles=test -Dspring-boot.run.arguments=--server.port=3003 spring-boot:run`;
-usa H2 efímera y no requiere PostgreSQL para recorrer la vista previa.
+- `/ui/register`: crear el perfil de la identidad de la sesión.
+- `/ui/profile`: consultar el perfil guardado.
+- `/ui/vehicles`: consultar vehículos y acceder al formulario nuevo de HU-03.
+- `/ui/documents`: gestionar licencias, seguros, cédulas e historiales.
+- `/ui/qualification`: consultar la aptitud calculada por el backend.
+- `/ui/availability`: guardar solicitudes y ver su estado persistido.
+- `/ui/operator/drivers`: consultar conductores y revisar documentación.
+
+Los formularios web tienen CSRF. El alta del vehículo incrementa la versión del
+conductor y rechaza versiones desactualizadas. El alta queda `PENDING`.
+Las revisiones de documentos exigen un motivo y el rol de operador.
+Los recursos CSS, iconos y JavaScript se sirven localmente.
+
+### Iniciar en Linux con PostgreSQL instalado
+
+Requiere Java 21, `initdb`, `pg_ctl`, `psql` y `createdb`:
+
+```bash
+# JAVA_HOME debe apuntar a un JDK 21.
+bash scripts/dev.sh
+```
+
+Abrir `http://localhost:3003/ui`. El script crea una base independiente en
+`.local/postgres`, puerto `55434`, que conserva los datos entre ejecuciones.
+Si se configura `SPRING_DATASOURCE_URL`, usa esa conexión sin crear otro clúster.
+La identidad local predeterminada es `user-sub-123`; si no tiene perfil, usar
+**Crear mi perfil**. La autenticación real con M1 todavía requiere completar
+la configuración y el endurecimiento de los adaptadores heredados.
+
+Para detener el PostgreSQL creado por el script:
+`pg_ctl -D "$PWD/.local/postgres" stop`.
+
+### Demostración opcional sin PostgreSQL
+
+```bash
+bash mvnw -Dspring-boot.run.profiles=demo spring-boot:run
+```
+
+Usa H2 persistente en `data/` y carga cuentas sintéticas identificadas como
+prueba. El perfil `local` no genera esas cuentas; la migración heredada V5
+mantiene un conductor/vehículo demo independiente de la identidad local.
+Las antiguas pantallas estáticas quedan en `/ui/preview`.
+
+### Alcance pendiente
+
+La solicitud de disponibilidad se guarda junto con auditoría y outbox, pero el
+repositorio aún no incorpora el worker que la entrega a M4. La UI muestra
+`PENDING`, sin afirmar disponibilidad efectiva. Las valoraciones E2 y la
+aprobación administrativa de perfiles/vehículos aún no tienen un flujo completo
+integrado; la revisión disponible es la de documentos.
+
+### Migraciones
+
+Se corrigió V4, que no podía ejecutarse sobre V1 por índices que referían a
+columnas inexistentes de auditoría e idempotencia. V6 agrega los campos de HU-03.
+La cadena V1–V6 está validada sobre una base nueva. Una base anterior que haya
+aplicado otra versión de V1/V2 necesita un plan de migración específico:
+no ejecutar `flyway repair` ni borrar sus datos para eludir los checksums.
+El script local crea una base separada para evitar modificar esas bases.
 
 ## HU-05: documentación del conductor
 

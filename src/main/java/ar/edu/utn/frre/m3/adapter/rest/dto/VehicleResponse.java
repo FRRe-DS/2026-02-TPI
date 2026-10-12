@@ -20,7 +20,10 @@ public record VehicleResponse(
     Integer modelYear,
     String qualificationStatus,
     Long driverVersion,
-    Instant createdAt
+    Instant createdAt,
+    String color,
+    Integer capacity,
+    Set<String> serviceCategories
 ) {
     public static VehicleResponse fromDomain(Vehicle v) {
         return new VehicleResponse(
@@ -35,7 +38,7 @@ public record VehicleResponse(
             v.getModelYear(),
             v.getQualificationStatus(),
             v.getDriverVersion(),
-            v.getCreatedAt()
+            v.getCreatedAt(), v.getColor(), v.getCapacity(), v.getServiceCategories()
         );
     }
 }

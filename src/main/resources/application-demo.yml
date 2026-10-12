@@ -1,0 +1,18 @@
+# Local-only, persistent demo. Run with --spring.profiles.active=demo.
+server:
+  address: 127.0.0.1
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/m3-demo;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+  flyway:
+    enabled: false
+app:
+  security:
+    mock-subject: user-sub-123

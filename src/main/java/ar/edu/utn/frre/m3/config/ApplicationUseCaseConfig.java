@@ -28,6 +28,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ApplicationUseCaseConfig {
 
+    @Bean
+    public ar.edu.utn.frre.m3.application.usecase.DriverWorkspaceService driverWorkspaceService(
+            DriverRepository drivers, VehicleRepository vehicles, DocumentRepository documents,
+            AvailabilityIntentRepository availability,
+            ar.edu.utn.frre.m3.application.port.out.CurrentPrincipalPort principal, UnitOfWork transactions, Clock clock) {
+        return new ar.edu.utn.frre.m3.application.usecase.DriverWorkspaceService(drivers, vehicles, documents, availability, principal, transactions, clock);
+    }
+
     // ─── Shared infrastructure ───────────────────────────────────────────────
 
     @Bean

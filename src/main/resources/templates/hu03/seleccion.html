@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tipo de vehículo</title><link rel="stylesheet" th:href="@{/css/hu03.css}"><link rel="stylesheet" th:href="@{/css/workspace.css}"></head>
+<body><nav th:replace="~{workspace :: navigation}"></nav><main class="card"><p class="eyebrow">HU-03 · PASO 1</p><h1>Seleccione qué vehículo desea registrar</h1><p class="error" th:if="${error}" th:text="${error}"></p><form th:action="@{/ui/vehicles/register/type}" method="post"><div class="choices"><label><input type="radio" name="type" value="AUTO" required> Auto</label><label><input type="radio" name="type" value="MOTO" required> Moto</label></div><button class="primary" type="submit">Continuar</button></form></main></body>
+</html>

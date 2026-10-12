@@ -50,22 +50,9 @@ CREATE INDEX IF NOT EXISTS idx_avail_intents_status
 -- audit_log
 -- Append-only log of relevant domain events.
 -- -------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS audit_log (
-    id              UUID        PRIMARY KEY,
-    entity_type     VARCHAR(80) NOT NULL,
-    entity_id       UUID        NOT NULL,
-    operation       VARCHAR(80) NOT NULL,
-    actor           VARCHAR(200),
-    correlation_id  VARCHAR(100),
-    occurred_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    changes         TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_log_entity
-    ON audit_log (entity_type, entity_id);
-
-CREATE INDEX IF NOT EXISTS idx_audit_log_occurred_at
-    ON audit_log (occurred_at);
+-- audit_log already exists in V1; keep its shared schema for document and availability audits.
+CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log (created_at);
 
 -- -------------------------------------------------------------
 -- outbox
@@ -101,21 +88,5 @@ CREATE INDEX IF NOT EXISTS idx_outbox_status_next
 -- (principal, method, normalized_path, idempotency_key).
 -- Retention: 7 days (enforced by a scheduled cleanup job).
 -- -------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS idempotency_records (
-    id              UUID        PRIMARY KEY,
-    principal       VARCHAR(200) NOT NULL,
-    http_method     VARCHAR(10)  NOT NULL,
-    path            VARCHAR(500) NOT NULL,
-    idempotency_key VARCHAR(200) NOT NULL,
-    request_hash    VARCHAR(64)  NOT NULL,   -- SHA-256 of canonical body
-    response_status INTEGER      NOT NULL,
-    response_body   TEXT,                   -- minimal, no tokens
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    expires_at      TIMESTAMPTZ  NOT NULL,
-
-    CONSTRAINT idempotency_uq
-        UNIQUE (principal, http_method, path, idempotency_key)
-);
-
-CREATE INDEX IF NOT EXISTS idx_idempotency_expires_at
-    ON idempotency_records (expires_at);
+-- idempotency_records is also shared with document registration (V1).
+CREATE INDEX IF NOT EXISTS idx_idempotency_created_at ON idempotency_records (created_at);
