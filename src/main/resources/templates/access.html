@@ -17,8 +17,11 @@
       <p class="access-help">Vas a iniciar sesión en M1 y volverás automáticamente a tu perfil de M3.</p>
       <div class="access-local" th:if="${demoAccessAvailable}">
         <strong>Demostración local</strong>
-        <p>Recorré la interfaz con un perfil de ejemplo, sin iniciar sesión en M1.</p>
-        <a href="/demo/access">Simular acceso al perfil <span aria-hidden="true">→</span></a>
+        <p>Recorré todas las pantallas con datos de ejemplo, sin iniciar sesión en M1.</p>
+        <div class="access-local-actions">
+          <a href="/demo/access">Simular acceso al perfil <span aria-hidden="true">→</span></a>
+          <a href="/demo/operator">Abrir listado de operadores <span aria-hidden="true">→</span></a>
+        </div>
       </div>
       <p class="access-alert" th:if="${m1Unavailable}" role="status">M1 no está iniciado en este entorno local. Usá los datos de ejemplo o levantá Keycloak para probar el inicio de sesión real.</p>
       <div class="access-local" th:if="${development}">

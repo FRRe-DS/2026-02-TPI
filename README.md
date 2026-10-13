@@ -36,7 +36,8 @@ sólo en desarrollo con `DEMO_ACCESS_ENABLED=true` y
 `DEMO_ACCESS_SUBJECT=<identity_subject de un perfil existente>`. La pantalla
 inicial muestra **Simular acceso al perfil** cuando ambas variables están
 configuradas. Para recorrer las pantallas administrativas, agregar
-`DEMO_ACCESS_ROLES=ROLE_DRIVER,ROLE_OPERATOR`.
+`DEMO_ACCESS_ROLES=ROLE_DRIVER,ROLE_OPERATOR`. Con esa configuración,
+`/demo/operator` abre directamente el listado administrativo de ejemplo.
 
 ## 2. Qué funciona
 

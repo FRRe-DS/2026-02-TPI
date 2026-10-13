@@ -39,9 +39,12 @@ public class WorkspaceWebController {
     @GetMapping("/") public String root(Model model) { return access(model,false); }
     @GetMapping("/login/m1") public String m1Unavailable(Model model) { return access(model,true); }
     @GetMapping("/demo/access") public String demoAccess(jakarta.servlet.http.HttpServletRequest request) {
-        if(!demoAccessEnabled || demoAccessSubject.isBlank()) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
-        request.getSession(true).setAttribute(DemoAccessAuthenticationFilter.SUBJECT_ATTRIBUTE,demoAccessSubject);
+        startDemoSession(request);
         return "redirect:/ui/profile";
+    }
+    @GetMapping("/demo/operator") public String demoOperator(jakarta.servlet.http.HttpServletRequest request) {
+        startDemoSession(request);
+        return "redirect:/ui/operator/drivers";
     }
     @GetMapping("/ui/register") public String registration(Model model) { return page(model,"register","Crear mi perfil"); }
     @PostMapping("/ui/register") public String register(@RequestParam String name, RedirectAttributes flash) {
@@ -170,5 +173,13 @@ public class WorkspaceWebController {
         model.addAttribute("m1Unavailable",m1Unavailable && developmentMode.enabled());
         model.addAttribute("demoAccessAvailable",demoAccessEnabled && !demoAccessSubject.isBlank());
         return "access";
+    }
+    private void startDemoSession(jakarta.servlet.http.HttpServletRequest request) {
+        if(!demoAccessEnabled || demoAccessSubject.isBlank()) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        var session=request.getSession(true);
+        // Reemplaza una sesión M1 previa para volver al recorrido completo de demostración.
+        session.removeAttribute("SPRING_SECURITY_CONTEXT");
+        session.setAttribute(DemoAccessAuthenticationFilter.SUBJECT_ATTRIBUTE,demoAccessSubject);
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
 }
