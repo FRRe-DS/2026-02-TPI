@@ -87,7 +87,11 @@ public class SecurityConfig {
             http.oauth2Login(o->o.authorizationEndpoint(e->e.authorizationRequestResolver(resolver)).userInfoEndpoint(e->e.oidcUserService(req->{
                 OidcUser user=oidc.loadUser(req);var roles=new HashSet<GrantedAuthority>(user.getAuthorities());roles.addAll(authorities(user.getIdToken().getClaims(),webClient));
                 return new DefaultOidcUser(roles,user.getIdToken(),user.getUserInfo(),"sub");
-            })).defaultSuccessUrl("/ui",true));
+            })).successHandler((request,response,authentication)->{
+                boolean operator=authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority)
+                    .anyMatch(role->role.equals("ROLE_OPERATOR") || role.equals("ROLE_OPERADOR") || role.equals("ROLE_ADMIN") || role.equals("ROLE_ADMINISTRADOR"));
+                response.sendRedirect(operator ? "/ui/operator/drivers" : "/ui");
+            }));
             var logout=new OidcClientInitiatedLogoutSuccessHandler(registrations);logout.setPostLogoutRedirectUri("{baseUrl}/");
             http.logout(l->l.logoutSuccessHandler(logout).invalidateHttpSession(true).deleteCookies("JSESSIONID"));
         }

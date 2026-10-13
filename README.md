@@ -35,7 +35,8 @@ Para recorrer un perfil local sin autenticar contra M1, habilitar la simulación
 sólo en desarrollo con `DEMO_ACCESS_ENABLED=true` y
 `DEMO_ACCESS_SUBJECT=<identity_subject de un perfil existente>`. La pantalla
 inicial muestra **Simular acceso al perfil** cuando ambas variables están
-configuradas.
+configuradas. Para recorrer las pantallas administrativas, agregar
+`DEMO_ACCESS_ROLES=ROLE_DRIVER,ROLE_OPERATOR`.
 
 ## 2. Qué funciona
 

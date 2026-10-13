@@ -20,6 +20,8 @@ public class DemoAccessAuthenticationFilter extends OncePerRequestFilter {
 
     @Value("${app.demo-access.enabled:false}")
     private boolean enabled;
+    @Value("${app.demo-access.roles:ROLE_DRIVER}")
+    private String roles;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -31,7 +33,7 @@ public class DemoAccessAuthenticationFilter extends OncePerRequestFilter {
             Object value = session == null ? null : session.getAttribute(SUBJECT_ATTRIBUTE);
             if (value instanceof String subject && !subject.isBlank()) {
                 var authentication = UsernamePasswordAuthenticationToken.authenticated(
-                        subject, "", AuthorityUtils.createAuthorityList("ROLE_DRIVER"));
+                        subject, "", AuthorityUtils.commaSeparatedStringToAuthorityList(roles));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 simulated = true;
             }
