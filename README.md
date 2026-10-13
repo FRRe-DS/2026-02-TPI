@@ -31,6 +31,23 @@ Para M1/Keycloak, copiar `.env.example`, completar sólo los datos del cliente
 M3 asignado por M1 y ejecutar con el perfil `production`. No guardar secretos
 de clientes en el repositorio.
 
+### Credenciales locales de prueba
+
+El Keycloak local usado para probar M3 tiene las siguientes cuentas de
+demostración. Son credenciales de desarrollo: no deben usarse fuera del entorno
+local.
+
+| Uso | Usuario | Contraseña | Rol |
+| --- | --- | --- | --- |
+| Consola de Keycloak | `admin` | `ds2025` | Administrador del realm |
+| Perfil de conductor | `m3-demo` | `m3-demo-local` | `DRIVER` |
+| Pantallas administrativas | `m3-operator` | `m3-operator-local` | `OPERATOR` |
+
+La consola se encuentra en [http://localhost:8080](http://localhost:8080).
+Para iniciar M3 como conductor u operador, abrir
+[http://localhost:3003](http://localhost:3003), elegir **Ingresar con M1** e
+ingresar con la cuenta correspondiente.
+
 Para recorrer un perfil local sin autenticar contra M1, habilitar la simulación
 sólo en desarrollo con `DEMO_ACCESS_ENABLED=true` y
 `DEMO_ACCESS_SUBJECT=<identity_subject de un perfil existente>`. La pantalla
