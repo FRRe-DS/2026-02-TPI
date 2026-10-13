@@ -31,6 +31,12 @@ Para M1/Keycloak, copiar `.env.example`, completar sólo los datos del cliente
 M3 asignado por M1 y ejecutar con el perfil `production`. No guardar secretos
 de clientes en el repositorio.
 
+Para recorrer un perfil local sin autenticar contra M1, habilitar la simulación
+sólo en desarrollo con `DEMO_ACCESS_ENABLED=true` y
+`DEMO_ACCESS_SUBJECT=<identity_subject de un perfil existente>`. La pantalla
+inicial muestra **Simular acceso al perfil** cuando ambas variables están
+configuradas.
+
 ## 2. Qué funciona
 
 Las pantallas comparten navegación lateral, se adaptan a celular y consultan
@@ -102,12 +108,9 @@ Las integraciones técnicas necesitan los scopes `m3:eligibility:read` o
 autorizan esos endpoints. Si M1 emite audiencia `account`, dejar
 `OIDC_AUDIENCE=account`, valor incluido en `.env.example`.
 
-No hay Keycloak ejecutándose en este entorno, así que desde este repositorio no
-se puede confirmar el login contra M1 en vivo. La compatibilidad se prueba con
-JWT firmados, audiencia y ambos formatos de roles. Con M1 en marcha,
-`/oauth2/authorization/keycloak` verifica el flujo completo. Los perfiles
-`local`, `demo` y `test` usan identidad de desarrollo; `production` y
-`docker` la desactivan.
+Con M1 en marcha, `/oauth2/authorization/keycloak` verifica el flujo completo.
+Los perfiles `local`, `demo` y `test` usan identidad de desarrollo;
+`production` y `docker` la desactivan.
 
 ## 5. API y verificación
 

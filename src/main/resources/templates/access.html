@@ -15,6 +15,11 @@
       <p class="access-description">Consultá tu perfil, documentación, vehículos, habilitación y disponibilidad con una sesión protegida por M1.</p>
       <a class="access-primary" th:href="${development} ? @{/login/m1} : @{/oauth2/authorization/keycloak}">Ingresar con M1 <span aria-hidden="true">→</span></a>
       <p class="access-help">Vas a iniciar sesión en M1 y volverás automáticamente a tu perfil de M3.</p>
+      <div class="access-local" th:if="${demoAccessAvailable}">
+        <strong>Demostración local</strong>
+        <p>Recorré la interfaz con un perfil de ejemplo, sin iniciar sesión en M1.</p>
+        <a href="/demo/access">Simular acceso al perfil <span aria-hidden="true">→</span></a>
+      </div>
       <p class="access-alert" th:if="${m1Unavailable}" role="status">M1 no está iniciado en este entorno local. Usá los datos de ejemplo o levantá Keycloak para probar el inicio de sesión real.</p>
       <div class="access-local" th:if="${development}">
         <strong>Entorno local</strong>

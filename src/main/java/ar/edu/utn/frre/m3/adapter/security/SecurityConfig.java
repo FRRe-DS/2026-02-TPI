@@ -73,9 +73,9 @@ public class SecurityConfig {
     }
     @Bean @Order(2)
     public SecurityFilterChain web(HttpSecurity http,DevelopmentMode mode,ClientRegistrationRepository registrations,
-            DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
+            DriverAccessService access,CurrentPrincipalPort principal, DemoAccessAuthenticationFilter demoAccess) throws Exception {
         http.authorizeHttpRequests(a->{
-            a.requestMatchers("/","/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/error").permitAll();
+            a.requestMatchers("/","/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/demo/access","/error").permitAll();
             if(mode.enabled()) a.anyRequest().permitAll();
             else a.requestMatchers("/ui/operator/**").hasAnyRole("OPERATOR","OPERADOR","ADMIN","ADMINISTRADOR")
                 .requestMatchers("/ui/**","/").authenticated().anyRequest().denyAll();
@@ -93,6 +93,7 @@ public class SecurityConfig {
         }
         else http.logout(l->l.logoutSuccessUrl("/ui").invalidateHttpSession(true).deleteCookies("JSESSIONID"));
         http.headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-ancestors 'none';")))
+            .addFilterBefore(demoAccess,AuthorizationFilter.class)
             .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
         return http.build();
     }

@@ -63,6 +63,10 @@ spring:
 
 # Parámetros para desarrollo y pruebas locales
 app:
+  demo-access:
+    # Sólo se habilita en una ejecución local explícita; nunca viene activo por defecto.
+    enabled: ${DEMO_ACCESS_ENABLED:false}
+    subject: ${DEMO_ACCESS_SUBJECT:}
   security:
     mock-subject: ${APP_SECURITY_MOCK_SUBJECT:}
     issuer: ${OIDC_ISSUER:}
