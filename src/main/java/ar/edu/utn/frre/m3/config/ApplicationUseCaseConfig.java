@@ -10,6 +10,7 @@ import ar.edu.utn.frre.m3.application.port.UnitOfWork;
 import ar.edu.utn.frre.m3.application.port.VehicleRepository;
 import ar.edu.utn.frre.m3.application.usecase.GetDriverVehiclesService;
 import ar.edu.utn.frre.m3.application.usecase.GetDriverVehiclesUseCase;
+import ar.edu.utn.frre.m3.application.usecase.GetDriverDispatchInfoService;
 import ar.edu.utn.frre.m3.application.usecase.RegisterDriverLicenseService;
 import ar.edu.utn.frre.m3.application.usecase.RegisterDriverLicenseUseCase;
 import ar.edu.utn.frre.m3.application.usecase.RegisterVehicleDocumentService;
@@ -95,6 +96,17 @@ public class ApplicationUseCaseConfig {
     @Bean
     public GetDriverVehiclesUseCase getDriverVehiclesUseCase(VehicleRepository vehicleRepository) {
         return new GetDriverVehiclesService(vehicleRepository);
+    }
+
+    @Bean
+    public ar.edu.utn.frre.m3.application.port.in.GetDriverDispatchInfoUseCase getDriverDispatchInfoUseCase(
+            DriverRepository driverRepository,
+            AvailabilityIntentRepository availabilityIntentRepository,
+            VehicleRepository vehicleRepository) {
+        return new GetDriverDispatchInfoService(
+                driverRepository,
+                availabilityIntentRepository,
+                vehicleRepository);
     }
 
     // ─── HU-10: Request Availability ─────────────────────────────────────────

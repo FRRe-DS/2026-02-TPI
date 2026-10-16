@@ -2,9 +2,13 @@ package ar.edu.utn.frre.m3.adapter.rest;
 
 import ar.edu.utn.frre.m3.adapter.rest.dto.BatchEligibilityRequestDTO;
 import ar.edu.utn.frre.m3.adapter.rest.dto.BatchEligibilityResponseDTO;
+import ar.edu.utn.frre.m3.adapter.rest.dto.DriverDispatchInfoRequest;
+import ar.edu.utn.frre.m3.adapter.rest.dto.DriverDispatchInfoResponse;
 import ar.edu.utn.frre.m3.adapter.rest.dto.EligibilityResponseDTO;
 import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
 import ar.edu.utn.frre.m3.application.port.in.CheckDriverAptitudeUseCase;
+import ar.edu.utn.frre.m3.application.port.in.GetDriverDispatchInfoUseCase;
+import ar.edu.utn.frre.m3.application.usecase.DriverDispatchInfo;
 import ar.edu.utn.frre.m3.domain.eligibility.EligibilityResult;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +26,15 @@ public class IntegrationController {
 
     private final CheckDriverAptitudeUseCase checkDriverAptitudeUseCase;
     private final ar.edu.utn.frre.m3.application.port.DriverRepository drivers;
+    private final GetDriverDispatchInfoUseCase getDriverDispatchInfoUseCase;
 
-    public IntegrationController(CheckDriverAptitudeUseCase checkDriverAptitudeUseCase, ar.edu.utn.frre.m3.application.port.DriverRepository drivers) {
+    public IntegrationController(
+            CheckDriverAptitudeUseCase checkDriverAptitudeUseCase,
+            ar.edu.utn.frre.m3.application.port.DriverRepository drivers,
+            GetDriverDispatchInfoUseCase getDriverDispatchInfoUseCase) {
         this.drivers=drivers;
         this.checkDriverAptitudeUseCase = Objects.requireNonNull(checkDriverAptitudeUseCase);
+        this.getDriverDispatchInfoUseCase = Objects.requireNonNull(getDriverDispatchInfoUseCase);
     }
 
     @GetMapping("/drivers/{driverId}/eligibility")
@@ -49,6 +58,19 @@ public class IntegrationController {
             }
         }
         return ResponseEntity.ok(new BatchEligibilityResponseDTO(results));
+    }
+
+    /**
+     * Returns the M3-owned dispatch data requested by M5. Effective availability
+     * (location, assignment, offer or trip) remains exclusively in M4.
+     */
+    @PostMapping("/drivers/dispatch-info")
+    public ResponseEntity<DriverDispatchInfoResponse> getDispatchInfo(
+            @Valid @RequestBody DriverDispatchInfoRequest request) {
+        DriverDispatchInfo result = getDriverDispatchInfoUseCase.execute(request.conductorId());
+        return ResponseEntity.ok()
+                .eTag(String.valueOf(result.driverVersion()))
+                .body(DriverDispatchInfoResponse.from(result));
     }
 
     @GetMapping("/drivers/{driverId}/summary")

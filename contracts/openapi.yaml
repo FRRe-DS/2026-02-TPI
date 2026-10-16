@@ -1,13 +1,13 @@
-# M3 — Conductores y Vehículos. Propuesta académica 0.2.0.
+# M3 — Conductores y Vehículos. Propuesta académica 0.2.1.
 # Adaptación de arquitectura a Java/Spring Boot y web Thymeleaf en E1.
-# API sin cambios respecto de 0.1.1: mismas rutas, operaciones, permisos y schemas.
+# El contrato de consulta de despacho M5 -> M3 se incorpora en esta única especificación.
 # Leer junto con M3_Arquitectura_TPI_Java_Web.md.
 # La web /ui/** usa sesión OIDC + CSRF; sus páginas no son parte de este contrato JSON.
 # La API sigue usando Bearer JWT, no cookies. Acuerdos M1/M4/M5/M6 pendientes.
 openapi: 3.0.3
 info:
   title: M3 — Conductores y Vehículos
-  version: 0.2.0
+  version: 0.2.1
   description: >-
     PROPUESTA para revisión, no contrato aprobado ni implementación desplegada. Base: RF-3.1 a RF-3.7 del TPI 2026.
     Arquitectura Java/Spring Boot y PostgreSQL; web Thymeleaf prevista desde E1. El cambio de stack no modifica las
@@ -597,6 +597,40 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/EligibilityBatchResult'}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '429': {$ref: '#/components/responses/Error429'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/integration/drivers/dispatch-info:
+    post:
+      operationId: getDriverDispatchInfo
+      summary: Consultar información M3 de un conductor antes del despacho
+      description: >-
+        Consulta de sólo lectura para M5. `disponible` representa exclusivamente la intención almacenada por M3:
+        conductor conectado y dispuesto a recibir solicitudes, con un vehículo seleccionado. No expresa reserva,
+        asignación, viaje, ubicación ni disponibilidad efectiva; esos aspectos corresponden a M4.
+      tags: [Integration]
+      x-planned-delivery: E1
+      x-required-service-scopes: ['m3:eligibility:read']
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DriverDispatchInfoRequest'}
+      responses:
+        '200':
+          description: Información M3 actual del conductor. `vehiculo` es null cuando no hay uno seleccionado.
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DriverDispatchInfo'}
         '400': {$ref: '#/components/responses/Error400'}
         '401': {$ref: '#/components/responses/Error401'}
         '403': {$ref: '#/components/responses/Error403'}
@@ -1249,6 +1283,42 @@ components:
       required: [driverId, displayName]
       description: Resumen mínimo de servicio. No incluye identidad M1, licencia, seguro, domicilio ni historial 
         privado.
+
+
+    DriverDispatchInfoRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        conductor_id: {type: string, format: uuid}
+      required: [conductor_id]
+
+
+    DriverDispatchInfo:
+      type: object
+      additionalProperties: false
+      properties:
+        conductor_id: {type: string, format: uuid}
+        habilitado:
+          type: boolean
+          description: Indica si M3 tiene al conductor habilitado para operar.
+        disponible:
+          type: boolean
+          description: >-
+            Intención M3 de estar conectado y recibir solicitudes. No es disponibilidad efectiva ni estado de viaje de M4.
+        vehiculo:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DriverDispatchVehicle'
+      required: [conductor_id, habilitado, disponible, vehiculo]
+
+
+    DriverDispatchVehicle:
+      type: object
+      additionalProperties: false
+      properties:
+        vehiculo_id: {type: string, format: uuid}
+        tipo_vehiculo: {type: string, enum: [AUTO, MOTO]}
+      required: [vehiculo_id, tipo_vehiculo]
 
 
     CreateCustomerRating:
