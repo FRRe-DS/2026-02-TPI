@@ -23,6 +23,22 @@
       "webOrigins": [
         "http://localhost:3003"
       ],
+      "protocolMappers": [
+        {
+          "name": "M3 realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       }
@@ -30,9 +46,11 @@
   ],
   "users": [
     {
+      "id": "c7c497ec-71cf-48ba-a387-23df38eda8d6",
       "username": "m3-demo",
       "enabled": true,
       "emailVerified": true,
+      "email": "m3-demo@example.com",
       "firstName": "Conductor",
       "lastName": "Demo",
       "credentials": [
@@ -44,6 +62,7 @@
       "username": "m3-operator",
       "enabled": true,
       "emailVerified": true,
+      "email": "m3-operator@example.com",
       "firstName": "Operador",
       "lastName": "Demo",
       "credentials": [

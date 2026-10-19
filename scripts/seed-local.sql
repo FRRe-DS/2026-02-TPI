@@ -6,7 +6,8 @@ INSERT INTO seed_profiles VALUES
 ('e0000000-0000-0000-0000-000000000002','ejemplo-mateo','Mateo Gómez · Ejemplo','PENDING','Fiat','Cronos','ZZ002AA','AUTO'),
 ('e0000000-0000-0000-0000-000000000003','ejemplo-sofia','Sofía Benítez · Ejemplo','OBSERVED','Honda','Wave','ZZ003AA','MOTO'),
 ('e0000000-0000-0000-0000-000000000004','ejemplo-tomas','Tomás López · Ejemplo','SUSPENDED','Renault','Logan','ZZ004AA','AUTO'),
-('e0000000-0000-0000-0000-000000000005','ejemplo-valentina','Valentina Ruiz · Ejemplo','APPROVED','Chevrolet','Onix','ZZ005AA','AUTO');
+('e0000000-0000-0000-0000-000000000005','ejemplo-valentina','Valentina Ruiz · Ejemplo','APPROVED','Chevrolet','Onix','ZZ005AA','AUTO'),
+('f0000000-0000-0000-0000-000000000002','c7c497ec-71cf-48ba-a387-23df38eda8d6','M3 Demo · Keycloak','APPROVED','Toyota','Corolla','M3D001','AUTO');
 INSERT INTO drivers(id,identity_subject,display_name,qualification_status,qualification_reason,version)
 SELECT id,subject,name,state,'Datos sintéticos de desarrollo',1 FROM seed_profiles ON CONFLICT DO NOTHING;
 -- Asociar solamente los UUID reservados que conservan la identidad del ejemplo.

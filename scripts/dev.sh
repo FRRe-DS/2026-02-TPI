@@ -40,6 +40,7 @@ if [[ -z "${SPRING_DATASOURCE_URL:-}" ]]; then
   export SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:55434/m3_db
   export SPRING_DATASOURCE_USERNAME=m3_user
   export SPRING_DATASOURCE_PASSWORD=m3_password
+  psql -h 127.0.0.1 -p 55434 -U m3_user -d m3_db -v ON_ERROR_STOP=1 -c "INSERT INTO drivers (id, identity_subject, display_name, qualification_status, qualification_reason, version, created_at, updated_at) VALUES ('f0000000-0000-0000-0000-000000000002', 'c7c497ec-71cf-48ba-a387-23df38eda8d6', 'M3 Demo · Keycloak', 'APPROVED', 'Perfil local vinculado a M1 para la demostración', 1, now(), now()) ON CONFLICT (identity_subject) DO NOTHING;" >/dev/null
 fi
 export OIDC_ISSUER="${OIDC_ISSUER:-http://localhost:8080/realms/ds-2025-realm}"
 export OIDC_JWKS_URI="${OIDC_JWKS_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/certs}"
