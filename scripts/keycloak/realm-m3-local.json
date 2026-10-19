@@ -59,6 +59,7 @@
       "realmRoles": [ "DRIVER" ]
     },
     {
+      "id": "c899fd5d-ae10-4e02-b31f-61dfa4c43c49",
       "username": "m3-operator",
       "enabled": true,
       "emailVerified": true,

@@ -51,6 +51,31 @@ class WorkspaceFlowTest {
                 .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("text/html"));
         }
     }
+    @Test void navigationShowsOnlyTheAreasAllowedByRoles() throws Exception {
+        mvc.perform(get("/ui/vehicles").with(user(subject).roles("DRIVER")))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("MI ESPACIO")))
+            .andExpect(content().string(containsString("Mi perfil")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("GESTIÓN"))));
+
+        mvc.perform(get("/ui/operator/drivers").with(user("operator-only").roles("OPERATOR")))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("GESTIÓN")))
+            .andExpect(content().string(containsString("Conductores")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("MI ESPACIO"))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Mi perfil"))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Crear perfil"))));
+
+        mvc.perform(get("/ui/operator/drivers").with(user(subject).roles("DRIVER","OPERATOR")))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("MI ESPACIO")))
+            .andExpect(content().string(containsString("GESTIÓN")));
+    }
+    @Test void adminUsesTheOperatorLandingPage() throws Exception {
+        mvc.perform(get("/ui").with(user("admin-only").roles("ADMIN")))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/ui/operator/drivers"));
+    }
     @Test void vehicleDocumentReviewAndAvailabilityPersistThroughWebForms() throws Exception {
         mvc.perform(post("/ui/vehicles").with(user(subject).roles("DRIVER")).with(csrf())
                 .param("type","AUTO").param("plate","ab123cd").param("make","Toyota").param("model","Corolla")

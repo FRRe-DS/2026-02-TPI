@@ -1,5 +1,6 @@
 package ar.edu.utn.frre.m3.adapter.web;
 
+import ar.edu.utn.frre.m3.adapter.security.RoleNavigation;
 import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
 import ar.edu.utn.frre.m3.application.port.in.GetDriverProfileUseCase;
 import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
@@ -16,6 +17,10 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAut
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -37,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 @AutoConfigureMockMvc(addFilters = false)
+@Import({RoleNavigation.class, UiNavigationModelAdvice.class})
 @ActiveProfiles("test")
 @DisplayName("Pruebas MockMvc de Adaptador Web: DriverProfileWebController (HU-02)")
 class DriverProfileWebControllerTest {
@@ -70,9 +76,30 @@ class DriverProfileWebControllerTest {
     @Test
     @DisplayName("GET /ui debe redirigir a /ui/profile")
     void shouldRedirectFromUiToProfile() throws Exception {
-        mockMvc.perform(get("/ui"))
+        mockMvc.perform(get("/ui").principal(authentication("driver", "ROLE_DRIVER")))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/ui/profile"));
+    }
+
+    @Test
+    @DisplayName("GET /ui redirige al listado para un operador sin rol DRIVER")
+    void shouldRedirectOperatorWithoutDriverRoleToDriverManagement() throws Exception {
+        mockMvc.perform(get("/ui").principal(authentication("operator", "ROLE_OPERATOR")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/ui/operator/drivers"));
+    }
+
+    @Test
+    @DisplayName("GET /ui/profile no busca Driver para un operador sin rol DRIVER")
+    void shouldNotLookUpDriverForOperatorOnly() throws Exception {
+        mockMvc.perform(get("/ui/profile").principal(authentication("operator", "ROLE_OPERATOR")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/ui/operator/drivers"));
+        org.mockito.Mockito.verifyNoInteractions(getMyDriverProfileUseCase);
+    }
+
+    private Authentication authentication(String name, String... authorities) {
+        return new UsernamePasswordAuthenticationToken(name, "n/a", AuthorityUtils.createAuthorityList(authorities));
     }
 
     @Test

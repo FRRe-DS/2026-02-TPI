@@ -10,6 +10,12 @@ INSERT INTO seed_profiles VALUES
 ('f0000000-0000-0000-0000-000000000002','c7c497ec-71cf-48ba-a387-23df38eda8d6','M3 Demo · Keycloak','APPROVED','Toyota','Corolla','M3D001','AUTO');
 INSERT INTO drivers(id,identity_subject,display_name,qualification_status,qualification_reason,version)
 SELECT id,subject,name,state,'Datos sintéticos de desarrollo',1 FROM seed_profiles ON CONFLICT DO NOTHING;
+UPDATE drivers
+SET display_name='María Demo · Keycloak', first_name='María', last_name='Demo', dni='44900123',
+    birth_date=DATE '1992-06-14', address='Av. Costanera 1234, Corrientes', phone='+54 379 455-0101',
+    email='m3-demo@example.com', qualification_status='APPROVED',
+    qualification_reason='Perfil local vinculado a M1 para la demostración', updated_at=CURRENT_TIMESTAMP
+WHERE identity_subject='c7c497ec-71cf-48ba-a387-23df38eda8d6';
 -- Asociar solamente los UUID reservados que conservan la identidad del ejemplo.
 DELETE FROM seed_profiles s WHERE NOT EXISTS (SELECT 1 FROM drivers d WHERE d.id=s.id AND d.identity_subject=s.subject);
 INSERT INTO vehicles(id,driver_id,vehicle_type,service_types,plate,make,model,model_year,qualification_status,color,capacity,service_categories)

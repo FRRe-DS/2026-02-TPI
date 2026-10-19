@@ -4,21 +4,22 @@
 <title th:text="${title} + ' · M3'">M3</title><link rel="stylesheet" th:href="@{/css/workspace.css}"></head>
 <body>
 <th:block th:fragment="navigation">
-<header class="mobile-bar"><a href="/ui/profile" class="mobile-brand">M3 · Conductores</a><button id="menu-toggle" type="button" aria-controls="workspace-navigation" aria-expanded="false" aria-label="Abrir menú">☰ <span>Menú</span></button></header>
+<header class="mobile-bar"><a th:href="${homePath}" class="mobile-brand">M3 · Conductores</a><button id="menu-toggle" type="button" aria-controls="workspace-navigation" aria-expanded="false" aria-label="Abrir menú">☰ <span>Menú</span></button></header>
 <button class="menu-backdrop" id="menu-backdrop" type="button" aria-label="Cerrar menú" hidden></button>
 <nav class="workspace-nav" id="workspace-navigation" aria-label="Navegación principal">
-<div class="sidebar-heading"><a class="brand" href="/ui/profile"><span class="brand-mark">M3</span><span>Conductores<small>y vehículos</small></span></a><button class="menu-close" id="menu-close" type="button" aria-label="Cerrar menú">×</button></div>
-<p class="nav-section">MI ESPACIO</p>
-<div class="nav-links">
+<div class="sidebar-heading"><a class="brand" th:href="${homePath}"><span class="brand-mark">M3</span><span>Conductores<small>y vehículos</small></span></a><button class="menu-close" id="menu-close" type="button" aria-label="Cerrar menú">×</button></div>
+<p class="nav-section" th:if="${hasDriverRole}">MI ESPACIO</p>
+<div class="nav-links" th:if="${hasDriverRole}">
 <a href="/ui/profile"><span class="nav-symbol" aria-hidden="true">◉</span> Mi perfil</a>
 <a href="/ui/vehicles"><span class="nav-symbol" aria-hidden="true">▤</span> Vehículos</a>
 <a href="/ui/documents"><span class="nav-symbol" aria-hidden="true">▣</span> Documentación</a>
 <a href="/ui/qualification"><span class="nav-symbol" aria-hidden="true">◇</span> Habilitación</a>
 <a href="/ui/availability"><span class="nav-symbol" aria-hidden="true">◎</span> Disponibilidad</a>
 <a href="/ui/customer-ratings"><span class="nav-symbol" aria-hidden="true">☆</span> Valoraciones</a>
+<a th:if="${showCreateProfile}" href="/ui/register"><span class="nav-symbol" aria-hidden="true">+</span> Crear perfil</a>
 </div>
-<p class="nav-section">GESTIÓN</p>
-<div class="nav-links"><a href="/ui/operator/drivers"><span class="nav-symbol" aria-hidden="true">▦</span> Operadores</a><a href="/ui/register"><span class="nav-symbol" aria-hidden="true">+</span> Crear perfil</a></div>
+<p class="nav-section" th:if="${hasOperatorRole}">GESTIÓN</p>
+<div class="nav-links" th:if="${hasOperatorRole}"><a href="/ui/operator/drivers"><span class="nav-symbol" aria-hidden="true">▦</span> Conductores</a></div>
 <div class="sidebar-bottom"><p>M3 · Conductores y vehículos</p><form method="post" th:action="@{/logout}" class="logout-form"><button class="nav-logout">Cerrar sesión <span aria-hidden="true">↗</span></button></form></div>
 </nav><script defer src="/js/workspace.js"></script>
 </th:block>

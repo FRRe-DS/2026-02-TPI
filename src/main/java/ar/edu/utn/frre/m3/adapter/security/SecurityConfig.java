@@ -73,11 +73,13 @@ public class SecurityConfig {
     }
     @Bean @Order(2)
     public SecurityFilterChain web(HttpSecurity http,DevelopmentMode mode,ClientRegistrationRepository registrations,
-            DriverAccessService access,CurrentPrincipalPort principal, DemoAccessAuthenticationFilter demoAccess) throws Exception {
+            DriverAccessService access,CurrentPrincipalPort principal, DemoAccessAuthenticationFilter demoAccess,
+            RoleNavigation navigation) throws Exception {
         http.authorizeHttpRequests(a->{
             a.requestMatchers("/","/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/demo/access","/demo/operator","/error").permitAll();
             if(mode.enabled()) a.anyRequest().permitAll();
             else a.requestMatchers("/ui/operator/**").hasAnyRole("OPERATOR","OPERADOR","ADMIN","ADMINISTRADOR")
+                .requestMatchers("/ui/register/**","/ui/vehicles/**","/ui/documents/**","/ui/qualification/**","/ui/availability/**","/ui/customer-ratings/**","/ui/drivers/**").hasAnyRole("DRIVER","CONDUCTOR")
                 .requestMatchers("/ui/**","/").authenticated().anyRequest().denyAll();
         });
         if(!mode.enabled()) {
@@ -87,11 +89,7 @@ public class SecurityConfig {
             http.oauth2Login(o->o.authorizationEndpoint(e->e.authorizationRequestResolver(resolver)).userInfoEndpoint(e->e.oidcUserService(req->{
                 OidcUser user=oidc.loadUser(req);var roles=new HashSet<GrantedAuthority>(user.getAuthorities());roles.addAll(authorities(user.getIdToken().getClaims(),webClient));
                 return new DefaultOidcUser(roles,user.getIdToken(),user.getUserInfo(),"sub");
-            })).successHandler((request,response,authentication)->{
-                boolean operator=authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority)
-                    .anyMatch(role->role.equals("ROLE_OPERATOR") || role.equals("ROLE_OPERADOR") || role.equals("ROLE_ADMIN") || role.equals("ROLE_ADMINISTRADOR"));
-                response.sendRedirect(operator ? "/ui/operator/drivers" : "/ui");
-            }));
+            })).successHandler((request,response,authentication)->response.sendRedirect(navigation.landingPath(authentication))));
             var logout=new OidcClientInitiatedLogoutSuccessHandler(registrations);logout.setPostLogoutRedirectUri("{baseUrl}/");
             http.logout(l->l.logoutSuccessHandler(logout).invalidateHttpSession(true).deleteCookies("JSESSIONID"));
         }

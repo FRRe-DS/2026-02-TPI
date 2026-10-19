@@ -21,7 +21,9 @@ bash scripts/dev.sh
 bash scripts/seed-local.sh
 ```
 
-Abrir [http://localhost:3003/ui/profile](http://localhost:3003/ui/profile). El
+Abrir [http://localhost:3003](http://localhost:3003). Después de iniciar sesión,
+M3 lleva a un conductor a `/ui/profile` y a un operador o administrador sin rol
+de conductor a `/ui/operator/drivers`. El
 script inicia PostgreSQL en `.local/postgres`, puerto `55434`, y la aplicación
 escucha en loopback. Si se define `SPRING_DATASOURCE_URL`, usa esa base en su
 lugar. Para detener la base local:

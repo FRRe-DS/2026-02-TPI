@@ -4,6 +4,7 @@ import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
 import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
 import ar.edu.utn.frre.m3.application.port.in.GetDriverProfileUseCase;
 import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
+import ar.edu.utn.frre.m3.adapter.security.RoleNavigation;
 import ar.edu.utn.frre.m3.domain.Driver;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.security.core.Authentication;
 
 /**
  * Controlador Web (Thymeleaf) para la interfaz de usuario de M3.
@@ -29,23 +31,30 @@ public class DriverProfileWebController {
 
     private final GetMyDriverProfileUseCase getMyDriverProfileUseCase;
     private final GetDriverProfileUseCase getDriverProfileUseCase;
+    private final RoleNavigation navigation;
 
     public DriverProfileWebController(GetMyDriverProfileUseCase getMyDriverProfileUseCase,
-                                      GetDriverProfileUseCase getDriverProfileUseCase) {
+                                      GetDriverProfileUseCase getDriverProfileUseCase,
+                                      RoleNavigation navigation) {
         this.getMyDriverProfileUseCase = Objects.requireNonNull(getMyDriverProfileUseCase, "getMyDriverProfileUseCase es requerido");
         this.getDriverProfileUseCase = Objects.requireNonNull(getDriverProfileUseCase, "getDriverProfileUseCase es requerido");
+        this.navigation = Objects.requireNonNull(navigation, "navigation es requerida");
     }
 
     @GetMapping({"", "/"})
-    public String index() {
-        return "redirect:/ui/profile";
+    public String index(Authentication authentication) {
+        return "redirect:" + navigation.landingPath(authentication);
     }
 
     @GetMapping("/profile")
     public String viewProfile(@RequestParam(name = "driverId", required = false) String driverIdParam,
                               @RequestParam(name = "switchSession", defaultValue = "false") boolean switchSession,
                               HttpServletRequest request,
+                              Authentication authentication,
                               Model model) {
+        if (navigation.isOperatorOnly(authentication)) {
+            return "redirect:/ui/operator/drivers";
+        }
         try {
             Driver driver;
             if (driverIdParam != null && !driverIdParam.isBlank()) {
@@ -75,7 +84,8 @@ public class DriverProfileWebController {
     }
 
     @GetMapping("/profile/{driverId}")
-    public String viewProfileByPath(@PathVariable UUID driverId, HttpServletRequest request, Model model) {
-        return viewProfile(driverId.toString(), false, request, model);
+    public String viewProfileByPath(@PathVariable UUID driverId, HttpServletRequest request,
+                                    Authentication authentication, Model model) {
+        return viewProfile(driverId.toString(), false, request, authentication, model);
     }
 }
