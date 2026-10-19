@@ -7,6 +7,13 @@ de sus datos; M1 sólo aporta identidad y acceso mediante el `sub` del JWT.
 ## 1. Iniciar la aplicación
 
 Se requiere **Java 21** y PostgreSQL con `initdb`, `pg_ctl`, `psql` y `createdb`.
+También se requiere Docker en ejecución: M1/Keycloak local se inicia en un
+contenedor y el arranque alternativo con `docker compose` de M3 también lo usa.
+Si Docker está apagado, iniciarlo una vez con:
+
+```bash
+sudo systemctl start docker
+```
 
 ```bash
 bash scripts/dev.sh

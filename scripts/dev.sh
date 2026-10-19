@@ -2,6 +2,24 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+start_local_m1() {
+  echo "El entorno local usa Docker. Si Docker esta apagado, ejecuta: sudo systemctl start docker"
+  command -v docker >/dev/null || { echo "Falta Docker para iniciar M1/Keycloak local." >&2; exit 1; }
+  docker info >/dev/null 2>&1 || { echo "Docker no esta iniciado. Ejecuta: sudo systemctl start docker" >&2; exit 1; }
+  docker compose up -d keycloak
+
+  for attempt in {1..60}; do
+    if curl --fail --silent --output /dev/null http://localhost:8080/realms/ds-2025-realm/.well-known/openid-configuration; then
+      return
+    fi
+    sleep 1
+  done
+  echo "M1/Keycloak no quedo disponible en http://localhost:8080. Revisa: docker compose logs keycloak" >&2
+  exit 1
+}
+
+start_local_m1
+
 # An explicit datasource uses the developer's configured PostgreSQL server.
 # Otherwise provision a separate cluster inside this checkout, never the system database.
 if [[ -z "${SPRING_DATASOURCE_URL:-}" ]]; then
@@ -23,4 +41,11 @@ if [[ -z "${SPRING_DATASOURCE_URL:-}" ]]; then
   export SPRING_DATASOURCE_USERNAME=m3_user
   export SPRING_DATASOURCE_PASSWORD=m3_password
 fi
-exec bash ./mvnw -Dspring-boot.run.profiles=local -Dspring-boot.run.arguments=--server.address=127.0.0.1 "$@" spring-boot:run
+export OIDC_ISSUER="${OIDC_ISSUER:-http://localhost:8080/realms/ds-2025-realm}"
+export OIDC_JWKS_URI="${OIDC_JWKS_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/certs}"
+export OIDC_AUTH_URI="${OIDC_AUTH_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/auth}"
+export OIDC_TOKEN_URI="${OIDC_TOKEN_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/token}"
+export OIDC_USERINFO_URI="${OIDC_USERINFO_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/userinfo}"
+export OIDC_WEB_CLIENT_ID="${OIDC_WEB_CLIENT_ID:-m3-web-client}"
+
+exec bash ./mvnw -Dspring-boot.run.profiles=production -Dspring-boot.run.arguments=--server.address=127.0.0.1 "$@" spring-boot:run

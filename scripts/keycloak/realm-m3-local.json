@@ -1,0 +1,55 @@
+{
+  "realm": "ds-2025-realm",
+  "enabled": true,
+  "displayName": "Desarrollo de Software 2025 (local)",
+  "roles": {
+    "realm": [
+      { "name": "DRIVER", "description": "Conductor" },
+      { "name": "OPERATOR", "description": "Operador" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "m3-web-client",
+      "name": "M3 web local",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:3003/login/oauth2/code/keycloak"
+      ],
+      "webOrigins": [
+        "http://localhost:3003"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "m3-demo",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Conductor",
+      "lastName": "Demo",
+      "credentials": [
+        { "type": "password", "value": "m3-demo-local", "temporary": false }
+      ],
+      "realmRoles": [ "DRIVER" ]
+    },
+    {
+      "username": "m3-operator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Operador",
+      "lastName": "Demo",
+      "credentials": [
+        { "type": "password", "value": "m3-operator-local", "temporary": false }
+      ],
+      "realmRoles": [ "OPERATOR" ]
+    }
+  ]
+}
