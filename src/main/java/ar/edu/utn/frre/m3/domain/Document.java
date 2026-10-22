@@ -97,19 +97,29 @@ public class Document {
     }
 
     public void review(ReviewDecision decision, String reason, String actor, long newDriverVersion) {
-        Objects.requireNonNull(decision, "Review decision must not be null");
-        if (reason == null || reason.trim().isEmpty() || reason.length() > 500) {
-            throw new DomainValidationException("Reason must be between 1 and 500 characters");
-        }
+        String normalizedReason = validateReview(decision, reason);
         this.status = switch (decision) {
             case APPROVED -> DocumentStatus.APPROVED;
             case OBSERVED -> DocumentStatus.OBSERVED;
             case REJECTED -> DocumentStatus.REJECTED;
         };
-        this.rejectionReason = reason;
+        this.rejectionReason = normalizedReason;
         this.reviewedBy = actor != null && !actor.isBlank() ? actor : "OPERATOR";
         this.reviewedAt = Instant.now();
         this.driverVersion = newDriverVersion;
+    }
+
+    /** Validates a review before the enclosing use case changes the driver's version. */
+    public String validateReview(ReviewDecision decision, String reason) {
+        Objects.requireNonNull(decision, "Review decision must not be null");
+        String normalizedReason = reason != null && !reason.isBlank() ? reason.trim() : null;
+        if (normalizedReason != null && normalizedReason.length() > 500) {
+            throw new DomainValidationException("Reason must not exceed 500 characters");
+        }
+        if (decision.requiresReason() && normalizedReason == null) {
+            throw new DomainValidationException(decision.missingReasonMessage());
+        }
+        return normalizedReason;
     }
 
     public void markAsNonCurrent() { this.isCurrent = false; }

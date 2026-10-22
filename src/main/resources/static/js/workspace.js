@@ -35,3 +35,23 @@ sidebar.addEventListener('keydown', event => {
 });
 mobile.addEventListener('change', () => setOpen(false));
 setOpen(false);
+
+for (const form of document.querySelectorAll('[data-document-review-form]')) {
+  const decision = form.querySelector('[data-document-review-decision]');
+  const reason = form.querySelector('[data-document-review-reason]');
+  const reasonContainer = form.querySelector('[data-document-review-reason-container]');
+  const label = form.querySelector('[data-document-review-reason-label]');
+  const hint = form.querySelector('[data-document-review-reason-hint]');
+  const updateReasonRequirement = () => {
+    const required = decision.value !== 'APPROVED';
+    reasonContainer.hidden = !required;
+    reason.required = required;
+    reason.setAttribute('aria-required', String(required));
+    label.textContent = required ? 'Motivo de la decisión *' : 'Motivo de la decisión (opcional)';
+    hint.textContent = required
+      ? 'Obligatorio para observar o rechazar un documento.'
+      : 'Opcional al aprobar.';
+  };
+  decision.addEventListener('change', updateReasonRequirement);
+  updateReasonRequirement();
+}

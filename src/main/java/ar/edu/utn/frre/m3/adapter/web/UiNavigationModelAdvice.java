@@ -3,6 +3,7 @@ package ar.edu.utn.frre.m3.adapter.web;
 import ar.edu.utn.frre.m3.adapter.security.RoleNavigation;
 import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
 import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -12,10 +13,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class UiNavigationModelAdvice {
     private final RoleNavigation navigation;
-    private final GetMyDriverProfileUseCase getMyDriverProfile;
+    private final ObjectProvider<GetMyDriverProfileUseCase> getMyDriverProfile;
 
-    public UiNavigationModelAdvice(RoleNavigation navigation, GetMyDriverProfileUseCase getMyDriverProfile) {
-        this.navigation = navigation;
+    public UiNavigationModelAdvice(ObjectProvider<RoleNavigation> navigation,
+                                   ObjectProvider<GetMyDriverProfileUseCase> getMyDriverProfile) {
+        this.navigation = navigation.getIfAvailable(RoleNavigation::new);
         this.getMyDriverProfile = getMyDriverProfile;
     }
 
@@ -30,8 +32,12 @@ public class UiNavigationModelAdvice {
     }
 
     private boolean hasDriverProfile() {
+        GetMyDriverProfileUseCase useCase = getMyDriverProfile.getIfAvailable();
+        if (useCase == null) {
+            return false;
+        }
         try {
-            getMyDriverProfile.getMyDriverProfile();
+            useCase.getMyDriverProfile();
             return true;
         } catch (DriverNotFoundException ignored) {
             return false;

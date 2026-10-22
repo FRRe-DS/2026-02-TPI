@@ -2,6 +2,7 @@ package ar.edu.utn.frre.m3.adapter.rest.dto;
 
 import ar.edu.utn.frre.m3.domain.ReviewDecision;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -11,8 +12,13 @@ public record ReviewDocumentRequest(
         @Schema(description = "Review decision", example = "APPROVED", requiredMode = Schema.RequiredMode.REQUIRED)
         ReviewDecision decision,
 
-        @NotNull(message = "reason is required")
-        @Size(min = 1, max = 500, message = "reason must be between 1 and 500 characters")
-        @Schema(description = "Justification or reason for the decision", example = "Documentation verified successfully", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Size(max = 500, message = "reason must not exceed 500 characters")
+        @Schema(description = "Optional when approving; required when observing or rejecting", example = "Documentation verified successfully")
         String reason
-) {}
+) {
+    @AssertTrue(message = "Debe indicar un motivo para observar o rechazar el documento.")
+    @Schema(hidden = true)
+    public boolean isReasonProvidedForNonApproval() {
+        return decision == null || !decision.requiresReason() || (reason != null && !reason.isBlank());
+    }
+}

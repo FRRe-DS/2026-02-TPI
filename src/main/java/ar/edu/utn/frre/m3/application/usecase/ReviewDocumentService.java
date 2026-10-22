@@ -57,6 +57,7 @@ public class ReviewDocumentService implements ReviewDocumentUseCase {
         }
 
         String previousStatus = document.getStatus().name();
+        document.validateReview(command.decision(), command.reason());
 
         driver.incrementVersion();
         driverRepository.save(driver);
@@ -73,7 +74,7 @@ public class ReviewDocumentService implements ReviewDocumentUseCase {
                 command.actor() != null && !command.actor().isBlank() ? command.actor() : "OPERATOR",
                 previousStatus,
                 updatedDocument.getStatus().name(),
-                command.reason(),
+                updatedDocument.getRejectionReason(),
                 command.correlationId(),
                 Instant.now()
         );

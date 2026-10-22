@@ -117,10 +117,10 @@
 <div class="doc-status"><span class="doc-status-label">Estado actual</span><span class="status-pill" th:attr="data-status=${d.status}" th:text="${d.statusLabel}">Observado</span></div></div>
 <dl class="doc-meta"><div><dt>Revisión</dt><dd th:text="${d.revision}">1</dd></div><div><dt>Vence</dt><dd th:text="${d.validUntil}">10/04/2027</dd></div><div><dt>Revisión actual</dt><dd th:text="${d.current ? 'Sí' : 'No'}">Sí</dd></div></dl>
 <p class="doc-reason" th:if="${d.rejectionReason != null}"><strong>Último motivo:</strong> <span th:text="${d.rejectionReason}"></span><small th:if="${d.reviewedAt != null}"><span th:text="${d.reviewedAt}"></span><span th:if="${d.reviewedBy != null}" th:text="${' · ' + d.reviewedBy}"></span></small></p>
-<form method="post" th:action="@{/ui/operator/drivers/{id}/documents/{doc}/review(id=${driver.id},doc=${d.id})}" class="doc-form">
+<form method="post" th:action="@{/ui/operator/drivers/{id}/documents/{doc}/review(id=${driver.id},doc=${d.id})}" class="doc-form" data-document-review-form>
 <input type="hidden" name="version" th:value="${driver.version}">
-<label>Decisión<select name="decision"><option value="APPROVED">Aprobar</option><option value="OBSERVED">Observar</option><option value="REJECTED">Rechazar</option></select></label>
-<label>Motivo de la decisión<input name="reason" maxlength="500" required placeholder="Explicá el motivo de la revisión"></label>
+<label>Decisión<select name="decision" data-document-review-decision><option value="APPROVED">Aprobar</option><option value="OBSERVED">Observar</option><option value="REJECTED">Rechazar</option></select></label>
+<label data-document-review-reason-container hidden><span data-document-review-reason-label>Motivo de la decisión *</span><input name="reason" maxlength="500" data-document-review-reason placeholder="Explicá el motivo de la revisión"><small class="hint" data-document-review-reason-hint>Obligatorio para observar o rechazar un documento.</small></label>
 <div class="doc-actions"><button type="submit">Guardar revisión</button></div></form>
 </article>
 <div th:fragment="operatorDocumentHistory" class="panel"><h2>Historial de documentos</h2>

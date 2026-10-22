@@ -1,7 +1,9 @@
 package ar.edu.utn.frre.m3.adapter.rest;
 
 import ar.edu.utn.frre.m3.adapter.rest.dto.ReviewDocumentRequest;
+import ar.edu.utn.frre.m3.adapter.security.RoleNavigation;
 import ar.edu.utn.frre.m3.application.port.IdempotencyRepository;
+import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
 import ar.edu.utn.frre.m3.application.usecase.ReviewDocumentCommand;
 import ar.edu.utn.frre.m3.application.usecase.ReviewDocumentUseCase;
 import ar.edu.utn.frre.m3.domain.*;
@@ -30,12 +32,13 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = DocumentReviewController.class)
-@Import(GlobalRestExceptionHandler.class)
+@Import({GlobalRestExceptionHandler.class, RoleNavigation.class})
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 class DocumentReviewControllerTest {
@@ -45,6 +48,7 @@ class DocumentReviewControllerTest {
 
     @MockBean private ReviewDocumentUseCase reviewDocumentUseCase;
     @MockBean private IdempotencyRepository idempotencyRepository;
+    @MockBean private GetMyDriverProfileUseCase getMyDriverProfileUseCase;
 
     private UUID driverId;
     private UUID documentId;
@@ -89,6 +93,64 @@ class DocumentReviewControllerTest {
                 .andExpect(jsonPath("$.driverVersion", is(8)));
 
         verify(idempotencyRepository).save(any(IdempotencyRecord.class));
+    }
+
+    @Test
+    @DisplayName("200 OK: Aprobar sin motivo es válido")
+    void shouldAllowApprovalWithoutReason() throws Exception {
+        ReviewDocumentRequest request = new ReviewDocumentRequest(ReviewDecision.APPROVED, null);
+        Document reviewedDocument = new Document(
+                documentId, driverId, null, DocumentType.LICENSE, "LIC-123", "DGT",
+                Instant.now().minusSeconds(3600), Instant.now().plusSeconds(36000),
+                null, 1, DocumentStatus.APPROVED, true, 8L, null,
+                Instant.now(), "OPERATOR", Instant.now().minusSeconds(7200)
+        );
+
+        when(idempotencyRepository.findByKeyAndMethodAndPath(any(), any(), any())).thenReturn(Optional.empty());
+        when(reviewDocumentUseCase.reviewDocument(any(ReviewDocumentCommand.class))).thenReturn(reviewedDocument);
+
+        mockMvc.perform(post("/api/v1/drivers/{driverId}/documents/{documentId}/reviews", driverId, documentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("If-Match", "\"7\"")
+                        .header("Idempotency-Key", idempotencyKey)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reviewStatus", is("APPROVED")));
+
+        verify(reviewDocumentUseCase).reviewDocument(any(ReviewDocumentCommand.class));
+    }
+
+    @Test
+    @DisplayName("400 Bad Request: Observar sin motivo se rechaza antes de invocar el caso de uso")
+    void shouldRejectObservationWithoutReason() throws Exception {
+        ReviewDocumentRequest request = new ReviewDocumentRequest(ReviewDecision.OBSERVED, " ");
+
+        mockMvc.perform(post("/api/v1/drivers/{driverId}/documents/{documentId}/reviews", driverId, documentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("If-Match", "\"7\"")
+                        .header("Idempotency-Key", idempotencyKey)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.errors[0].message", containsString("Debe indicar un motivo para observar o rechazar el documento.")));
+
+        verifyNoInteractions(reviewDocumentUseCase, idempotencyRepository);
+    }
+
+    @Test
+    @DisplayName("400 Bad Request: Rechazar sin motivo se rechaza antes de invocar el caso de uso")
+    void shouldRejectRejectionWithoutReason() throws Exception {
+        ReviewDocumentRequest request = new ReviewDocumentRequest(ReviewDecision.REJECTED, null);
+
+        mockMvc.perform(post("/api/v1/drivers/{driverId}/documents/{documentId}/reviews", driverId, documentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("If-Match", "\"7\"")
+                        .header("Idempotency-Key", idempotencyKey)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].message", containsString("Debe indicar un motivo para observar o rechazar el documento.")));
+
+        verifyNoInteractions(reviewDocumentUseCase, idempotencyRepository);
     }
 
     @Test

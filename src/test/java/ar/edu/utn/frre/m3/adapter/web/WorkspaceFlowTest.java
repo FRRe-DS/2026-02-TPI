@@ -130,6 +130,29 @@ class WorkspaceFlowTest {
         assertEquals(messages+1,outbox.count());
         mvc.perform(get("/ui/availability").with(user(subject))).andExpect(status().isOk()).andExpect(content().string(containsString("PENDING")));
     }
+    @Test void documentReviewMakesTheReasonOptionalOnlyForApproval() throws Exception {
+        var now=Instant.now();
+        var doc=ar.edu.utn.frre.m3.domain.Document.createPendingLicense(driverId,"LIC-MOTIVO",now.minusSeconds(100),now.plusSeconds(86400),java.util.Set.of(ar.edu.utn.frre.m3.domain.ServiceType.AUTO),null,1,1L);
+        documents.save(doc);
+
+        mvc.perform(get("/ui/operator/drivers/"+driverId).with(user(subject).roles("OPERATOR")))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("data-document-review-reason-container hidden")));
+
+        mvc.perform(post("/ui/operator/drivers/"+driverId+"/documents/"+doc.getId()+"/review")
+                .with(user(subject).roles("OPERATOR")).with(csrf()).param("decision","OBSERVED").param("version","1"))
+            .andExpect(redirectedUrl("/ui/operator/drivers/"+driverId))
+            .andExpect(flash().attribute("error","Debe indicar el motivo de la observación."));
+        assertEquals(DocumentStatus.PENDING,documents.findById(doc.getId()).orElseThrow().getStatus());
+
+        mvc.perform(post("/ui/operator/drivers/"+driverId+"/documents/"+doc.getId()+"/review")
+                .with(user(subject).roles("OPERATOR")).with(csrf()).param("decision","APPROVED").param("version","1"))
+            .andExpect(redirectedUrl("/ui/operator/drivers/"+driverId))
+            .andExpect(flash().attributeExists("success"));
+        var approved=documents.findById(doc.getId()).orElseThrow();
+        assertEquals(DocumentStatus.APPROVED,approved.getStatus());
+        assertNull(approved.getRejectionReason());
+    }
     @Test void integratedHu03PreservesEveryFormField() throws Exception {
         mvc.perform(get("/ui/vehicles/register").with(user(subject))).andExpect(status().isOk());
         mvc.perform(post("/ui/vehicles/register/type").with(user(subject)).with(csrf()).param("type","AUTO"))

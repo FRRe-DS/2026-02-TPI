@@ -215,8 +215,8 @@ class ReviewDocumentUseCaseTest {
     }
 
     @Test
-    @DisplayName("Validación de regla de negocio: Motivo inválido lanza DomainValidationException")
-    void shouldThrowDomainValidationExceptionWhenReasonIsInvalid() {
+    @DisplayName("Aprobar sin motivo es válido y conserva la auditoría")
+    void shouldAllowApprovalWithoutReason() {
         Driver driver = new Driver(driverId, "sub|1", "Driver", QualificationStatus.PENDING, 1L, createdAt, createdAt);
         Document doc = new Document(documentId, driverId, null, DocumentType.LICENSE, "LIC-1", "DGT", issuedAt, validUntil, null, 1, DocumentStatus.PENDING, true, 1L, null, null, null, createdAt);
 
@@ -226,9 +226,76 @@ class ReviewDocumentUseCaseTest {
 
         when(driverRepository.findByIdWithPessimisticLock(driverId)).thenReturn(Optional.of(driver));
         when(documentRepository.findById(documentId)).thenReturn(Optional.of(doc));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(i -> i.getArgument(0));
+        when(documentRepository.save(any(Document.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertThatThrownBy(() -> reviewDocumentService.reviewDocument(emptyReasonCommand))
+        Document result = reviewDocumentService.reviewDocument(emptyReasonCommand);
+
+        assertThat(result.getStatus()).isEqualTo(DocumentStatus.APPROVED);
+        assertThat(result.getRejectionReason()).isNull();
+        ArgumentCaptor<AuditLog> auditCaptor = ArgumentCaptor.forClass(AuditLog.class);
+        verify(auditLogRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getReason()).isNull();
+    }
+
+    @Test
+    @DisplayName("Observar sin motivo se rechaza")
+    void shouldRejectObservationWithoutReason() {
+        Driver driver = new Driver(driverId, "sub|1", "Driver", QualificationStatus.PENDING, 1L, createdAt, createdAt);
+        Document doc = new Document(documentId, driverId, null, DocumentType.LICENSE, "LIC-1", "DGT", issuedAt, validUntil, null, 1, DocumentStatus.PENDING, true, 1L, null, null, null, createdAt);
+        ReviewDocumentCommand command = new ReviewDocumentCommand(
+                driverId, documentId, ReviewDecision.OBSERVED, null, 1L, "operator", "corr-observed-blank"
+        );
+
+        when(driverRepository.findByIdWithPessimisticLock(driverId)).thenReturn(Optional.of(driver));
+        when(documentRepository.findById(documentId)).thenReturn(Optional.of(doc));
+
+        assertThatThrownBy(() -> reviewDocumentService.reviewDocument(command))
                 .isInstanceOf(DomainValidationException.class)
-                .hasMessageContaining("Reason must be between 1 and 500 characters");
+                .hasMessage("Debe indicar el motivo de la observación.");
+
+        verify(documentRepository, never()).save(any());
+        verify(auditLogRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Rechazar sin motivo se rechaza")
+    void shouldRejectRejectionWithoutReason() {
+        Driver driver = new Driver(driverId, "sub|1", "Driver", QualificationStatus.PENDING, 1L, createdAt, createdAt);
+        Document doc = new Document(documentId, driverId, null, DocumentType.LICENSE, "LIC-1", "DGT", issuedAt, validUntil, null, 1, DocumentStatus.PENDING, true, 1L, null, null, null, createdAt);
+        ReviewDocumentCommand command = new ReviewDocumentCommand(
+                driverId, documentId, ReviewDecision.REJECTED, " ", 1L, "operator", "corr-rejected-blank"
+        );
+
+        when(driverRepository.findByIdWithPessimisticLock(driverId)).thenReturn(Optional.of(driver));
+        when(documentRepository.findById(documentId)).thenReturn(Optional.of(doc));
+
+        assertThatThrownBy(() -> reviewDocumentService.reviewDocument(command))
+                .isInstanceOf(DomainValidationException.class)
+                .hasMessage("Debe indicar el motivo del rechazo.");
+
+        verify(documentRepository, never()).save(any());
+        verify(auditLogRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Rechazar con motivo es válido")
+    void shouldAllowRejectionWithReason() {
+        Driver driver = new Driver(driverId, "sub|1", "Driver", QualificationStatus.PENDING, 1L, createdAt, createdAt);
+        Document doc = new Document(documentId, driverId, null, DocumentType.LICENSE, "LIC-1", "DGT", issuedAt, validUntil, null, 1, DocumentStatus.PENDING, true, 1L, null, null, null, createdAt);
+        ReviewDocumentCommand command = new ReviewDocumentCommand(
+                driverId, documentId, ReviewDecision.REJECTED, "La póliza no coincide con la patente.", 1L, "operator", "corr-rejected-reason"
+        );
+
+        when(driverRepository.findByIdWithPessimisticLock(driverId)).thenReturn(Optional.of(driver));
+        when(documentRepository.findById(documentId)).thenReturn(Optional.of(doc));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(i -> i.getArgument(0));
+        when(documentRepository.save(any(Document.class))).thenAnswer(i -> i.getArgument(0));
+
+        Document result = reviewDocumentService.reviewDocument(command);
+
+        assertThat(result.getStatus()).isEqualTo(DocumentStatus.REJECTED);
+        assertThat(result.getRejectionReason()).isEqualTo("La póliza no coincide con la patente.");
+        verify(auditLogRepository).save(any(AuditLog.class));
     }
 }

@@ -334,10 +334,10 @@ paths:
       - {$ref: '#/components/parameters/DocumentId'}
     post:
       operationId: reviewDocument
-      summary: Revisar documento con motivo
+      summary: Revisar documento
       description: >-
         Admite documento del conductor o de uno de sus vehículos; comprobar la relación completa. Crea auditoría, no cambia
-        contenido de la revisión.
+        contenido de la revisión. El motivo es opcional al aprobar y obligatorio al observar o rechazar.
       tags: [Documents]
       x-planned-delivery: E1
       x-allowed-human-roles: [Operador, Administrador]
@@ -1133,8 +1133,8 @@ components:
       additionalProperties: false
       properties:
         decision: {type: string, enum: [APPROVED, OBSERVED, REJECTED]}
-        reason: {type: string, minLength: 1, maxLength: 500}
-      required: [decision, reason]
+        reason: {type: string, maxLength: 500, description: Opcional para APPROVED; obligatorio para OBSERVED y REJECTED.}
+      required: [decision]
 
 
     QualificationDecisionInput:
