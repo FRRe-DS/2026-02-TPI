@@ -48,3 +48,5 @@ body{padding-left:264px;min-height:100vh}.workspace-nav{position:fixed;inset:0 a
 }
 @media(max-width:420px){.doc-meta{grid-template-columns:1fr}}
 table .status-pill{margin:0}
+.form-wide{grid-column:1/-1}
+input::placeholder,textarea::placeholder{color:#75839a;opacity:1}

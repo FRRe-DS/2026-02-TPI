@@ -1,6 +1,7 @@
 package ar.edu.utn.frre.m3.application.usecase;
 
 import ar.edu.utn.frre.m3.application.port.*;
+import ar.edu.utn.frre.m3.application.port.in.UpdateMyPersonalInfoUseCase;
 import ar.edu.utn.frre.m3.application.port.out.CurrentPrincipalPort;
 import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
 import ar.edu.utn.frre.m3.domain.*;
@@ -9,7 +10,7 @@ import java.time.Instant;
 import java.util.*;
 
 /** Application boundary for the integrated web workspace. */
-public class DriverWorkspaceService {
+public class DriverWorkspaceService implements UpdateMyPersonalInfoUseCase {
     private final DriverRepository drivers;
     private final VehicleRepository vehicles;
     private final DocumentRepository documents;
@@ -39,6 +40,27 @@ public class DriverWorkspaceService {
         if (!isOperator()) throw new DriverAccessDeniedException("Esta acción requiere un operador.");
     }
     public String actor() { return principal.getSubject().orElseThrow(() -> new DriverAccessDeniedException("No hay sesión.")); }
+    @Override
+    public Driver updatePersonalInfo(PersonalInfo personalInfo, long version) {
+        Objects.requireNonNull(personalInfo, "Los datos personales son requeridos.");
+        if (personalInfo.getBirthDate() == null || personalInfo.getBirthDate().isAfter(java.time.LocalDate.now(clock))) {
+            throw new IllegalArgumentException("Ingresá una fecha de nacimiento válida.");
+        }
+        required(personalInfo.getFirstName(), 100);
+        required(personalInfo.getLastName(), 100);
+        required(personalInfo.getDni(), 32);
+        required(personalInfo.getAddress(), 255);
+        required(personalInfo.getPhone(), 50);
+        required(personalInfo.getEmail(), 150);
+        Driver owner = current();
+        return transactions.executeInTransaction(() -> {
+            Driver locked = drivers.findByIdWithPessimisticLock(owner.getId()).orElseThrow(
+                    () -> new IllegalArgumentException("No se encontró el conductor."));
+            locked.validateVersion(version);
+            locked.updatePersonalInfo(personalInfo, Instant.now(clock));
+            return drivers.save(locked);
+        });
+    }
     public List<Vehicle> vehicles(UUID id) { driver(id); return vehicles.findByDriverId(id); }
     public List<Document> documents(UUID id) {
         driver(id);

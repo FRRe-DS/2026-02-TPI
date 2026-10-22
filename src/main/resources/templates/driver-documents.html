@@ -8,7 +8,7 @@
     </div>
     <div class="mb-3">
       <label for="documentNumber" class="form-label">Número de licencia</label>
-      <input id="documentNumber" th:field="*{documentNumber}" class="form-control" maxlength="80" required>
+      <input id="documentNumber" th:field="*{documentNumber}" class="form-control" maxlength="80" placeholder="Ej. B.1 12345678" required>
       <div class="text-danger" th:errors="*{documentNumber}"></div>
     </div>
     <div class="form-grid">

@@ -27,7 +27,7 @@
 <p th:if="${success}" class="notice success" role="status" th:text="${success}"></p>
 <p th:if="${error}" class="notice error" role="alert" th:text="${error}"></p>
 <section th:if="${page == 'register'}" class="panel"><p>Creá el perfil asociado a tu sesión actual.</p>
-<form method="post" th:action="@{/ui/register}"><label>Nombre completo<input name="name" required maxlength="100"></label><button>Crear perfil</button></form></section>
+<form method="post" th:action="@{/ui/register}"><label>Nombre completo<input name="name" required maxlength="100" placeholder="Ej. Ana Gómez"></label><button>Crear perfil</button></form></section>
 <section th:if="${page == 'vehicles'}">
 <div class="panel"><h2>Vehículos registrados</h2><p th:if="${#lists.isEmpty(vehicles)}">Todavía no registraste vehículos.</p>
 <div class="cards"><article th:each="v : ${vehicles}" class="vehicle"><span class="status-pill" th:attr="data-status=${v.qualificationStatus}" th:text="${v.qualificationStatus}"></span>
@@ -44,7 +44,7 @@
 <form th:unless="${#lists.isEmpty(vehicles)}" method="post" th:action="@{/ui/documents/vehicle}" class="form-grid">
 <label>Vehículo<select name="vehicleId" required><option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.plate + ' · ' + v.make}"></option></select></label>
 <label>Documento<select name="documentType"><option value="INSURANCE">Seguro</option><option value="VEHICLE_REGISTRATION">Cédula del vehículo</option></select></label>
-<label>Número<input name="documentNumber" maxlength="80" required></label><label>Entidad emisora<input name="issuingEntity" maxlength="100"></label>
+<label>Número<input name="documentNumber" maxlength="80" placeholder="Ej. PÓL-123456" required></label><label>Entidad emisora<input name="issuingEntity" maxlength="100" placeholder="Ej. La Segunda Seguros"></label>
 <label>Emisión<input name="issuedAt" type="date" required></label><label>Vencimiento<input name="validUntil" type="date" required></label>
 <button type="submit">Registrar documento</button></form></div>
 <div class="panel" th:replace="~{workspace :: documentHistory}"></div></section>
@@ -95,14 +95,14 @@
 <input type="hidden" name="version" th:value="${driver.version}"><input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
 <label>Objeto<select name="vehicleId"><option value="">Conductor</option><option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.plate + ' · ' + v.qualificationStatus}"></option></select></label>
 <label>Decisión<select name="status"><option value="APPROVED">Aprobar</option><option value="OBSERVED">Observar</option><option value="REJECTED">Rechazar</option><option value="SUSPENDED">Suspender</option></select></label>
-<label>Motivo<input name="reason" required maxlength="500"></label><button>Guardar decisión</button></form>
+<label>Motivo<input name="reason" required maxlength="500" placeholder="Ej. Documentación vigente y legible"></label><button>Guardar decisión</button></form>
 <h3>Historial de decisiones</h3><p th:if="${#lists.isEmpty(decisions)}">Sin decisiones administrativas.</p>
 <article th:each="q : ${decisions}"><p th:text="${q.vehicleId == null ? 'Conductor' : 'Vehículo ' + q.vehicleId}"></p><strong th:text="${q.previousStatus + ' → ' + q.newStatus}"></strong><p th:text="${q.reason}"></p><small th:text="${q.occurredAt + ' · ' + q.actorSubject}"></small></article></div>
 </section>
 <section th:if="${page == 'ratings'}"><div class="panel"><h2>Valorar un cliente</h2><p>Ingresá el identificador de un viaje completado. Se verificará su asignación con el módulo de viajes antes de registrar tu valoración.</p>
 <form method="post" th:action="@{/ui/customer-ratings}" class="form-grid"><input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
-<label>Viaje<input name="tripId" required maxlength="128"></label><label>Puntuación<select name="score"><option value="5">5 · Excelente</option><option value="4">4 · Muy bueno</option><option value="3">3 · Bueno</option><option value="2">2 · Regular</option><option value="1">1 · Malo</option></select></label>
-<label>Comentario<textarea name="comment" maxlength="500"></textarea></label><button>Registrar valoración</button></form></div>
+<label>Viaje<input name="tripId" required maxlength="128" placeholder="Ej. VIAJE-2026-001"></label><label>Puntuación<select name="score"><option value="5">5 · Excelente</option><option value="4">4 · Muy bueno</option><option value="3">3 · Bueno</option><option value="2">2 · Regular</option><option value="1">1 · Malo</option></select></label>
+<label>Comentario<textarea name="comment" maxlength="500" placeholder="Ej. El viaje fue puntual y cordial"></textarea></label><button>Registrar valoración</button></form></div>
 <div class="panel"><h2>Mis valoraciones</h2><p th:if="${#lists.isEmpty(ratings)}">Todavía no registraste valoraciones.</p>
 <article th:each="r : ${ratings}"><h3 th:text="${r.score + '/5 · Viaje ' + r.tripId}"></h3><p th:text="${r.comment}"></p><small th:text="${r.createdAt}"></small></article></div></section>
 <section th:if="${page == 'error'}" class="panel"><a href="/ui/register">Crear mi perfil</a> · <a href="/ui">Volver al inicio</a></section>

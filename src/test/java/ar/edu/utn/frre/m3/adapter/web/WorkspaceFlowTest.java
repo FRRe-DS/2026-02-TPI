@@ -161,4 +161,24 @@ class WorkspaceFlowTest {
         assertEquals("PENDING",drivers.findByIdentitySubject(newSubject).orElseThrow().getQualificationStatus());
         mvc.perform(get("/ui/profile").with(user(newSubject))).andExpect(status().isOk()).andExpect(content().string(containsString("Nuevo Conductor")));
     }
+    @Test void personalDataCanBeCompletedFromTheProfile() throws Exception {
+        mvc.perform(get("/ui/profile/edit").with(user(subject)))
+            .andExpect(status().isOk()).andExpect(content().string(containsString("Actualizar datos personales")));
+
+        mvc.perform(post("/ui/profile/edit").with(user(subject)).with(csrf())
+                .param("firstName", "Ana").param("lastName", "Gómez").param("dni", "42123456")
+                .param("birthDate", "1999-08-20").param("address", "Av. Costanera 1234, Corrientes")
+                .param("phone", "+54 379 455 0101").param("email", "ana.gomez@example.com").param("version", "1"))
+            .andExpect(redirectedUrl("/ui/profile")).andExpect(flash().attributeExists("success"));
+
+        var saved = drivers.findById(driverId).orElseThrow();
+        assertEquals("Ana", saved.getFirstName());
+        assertEquals("Gómez", saved.getLastName());
+        assertEquals("42123456", saved.getDni());
+        assertEquals("ana.gomez@example.com", saved.getEmail());
+        assertEquals(2L, saved.getVersion());
+        mvc.perform(get("/ui/profile").with(user(subject)))
+            .andExpect(content().string(containsString("Ana Gómez")))
+            .andExpect(content().string(containsString("42123456")));
+    }
 }

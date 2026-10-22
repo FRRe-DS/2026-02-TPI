@@ -3,12 +3,12 @@
     <input type="hidden" name="type" th:value="${type}"><input type="hidden" th:field="*{version}">
     <div class="error" th:if="${#fields.hasGlobalErrors()}" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
     <div class="form-grid">
-      <label>Marca<input th:field="*{brand}" maxlength="60" required><small class="error" th:errors="*{brand}"></small></label>
-      <label>Modelo<input th:field="*{model}" maxlength="60" required><small class="error" th:errors="*{model}"></small></label>
-      <label>Año<input th:field="*{year}" type="number" min="1886" max="2100" required><small class="error" th:errors="*{year}"></small></label>
-      <label>Patente<input th:field="*{plate}" maxlength="20" required><small class="error" th:errors="*{plate}"></small></label>
-      <label>Color<input th:field="*{color}" maxlength="30" required><small class="error" th:errors="*{color}"></small></label>
-      <label>Capacidad (cantidad de pasajeros)<input th:field="*{capacity}" type="number" min="1" max="6" required><small class="error" th:errors="*{capacity}"></small></label>
+      <label>Marca<input th:field="*{brand}" maxlength="60" placeholder="Ej. Toyota" required><small class="error" th:errors="*{brand}"></small></label>
+      <label>Modelo<input th:field="*{model}" maxlength="60" placeholder="Ej. Corolla" required><small class="error" th:errors="*{model}"></small></label>
+      <label>Año<input th:field="*{year}" type="number" min="1886" max="2100" placeholder="Ej. 2022" required><small class="error" th:errors="*{year}"></small></label>
+      <label>Patente<input th:field="*{plate}" maxlength="20" placeholder="Ej. AB 123 CD" required><small class="error" th:errors="*{plate}"></small></label>
+      <label>Color<input th:field="*{color}" maxlength="30" placeholder="Ej. Gris plata" required><small class="error" th:errors="*{color}"></small></label>
+      <label>Capacidad (cantidad de pasajeros)<input th:field="*{capacity}" type="number" min="1" max="6" placeholder="Ej. 4" required><small class="error" th:errors="*{capacity}"></small></label>
     </div>
     <h2>Tipo de servicio que ofrece</h2>
     <div class="services">

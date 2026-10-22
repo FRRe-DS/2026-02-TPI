@@ -4,14 +4,21 @@ import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
 import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
 import ar.edu.utn.frre.m3.application.port.in.GetDriverProfileUseCase;
 import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
+import ar.edu.utn.frre.m3.application.port.in.UpdateMyPersonalInfoUseCase;
 import ar.edu.utn.frre.m3.adapter.security.RoleNavigation;
 import ar.edu.utn.frre.m3.domain.Driver;
+import ar.edu.utn.frre.m3.domain.exception.VersionMismatchException;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Objects;
@@ -31,13 +38,16 @@ public class DriverProfileWebController {
 
     private final GetMyDriverProfileUseCase getMyDriverProfileUseCase;
     private final GetDriverProfileUseCase getDriverProfileUseCase;
+    private final UpdateMyPersonalInfoUseCase updateMyPersonalInfo;
     private final RoleNavigation navigation;
 
     public DriverProfileWebController(GetMyDriverProfileUseCase getMyDriverProfileUseCase,
                                       GetDriverProfileUseCase getDriverProfileUseCase,
+                                      UpdateMyPersonalInfoUseCase updateMyPersonalInfo,
                                       RoleNavigation navigation) {
         this.getMyDriverProfileUseCase = Objects.requireNonNull(getMyDriverProfileUseCase, "getMyDriverProfileUseCase es requerido");
         this.getDriverProfileUseCase = Objects.requireNonNull(getDriverProfileUseCase, "getDriverProfileUseCase es requerido");
+        this.updateMyPersonalInfo = Objects.requireNonNull(updateMyPersonalInfo, "updateMyPersonalInfo es requerido");
         this.navigation = Objects.requireNonNull(navigation, "navigation es requerida");
     }
 
@@ -87,5 +97,39 @@ public class DriverProfileWebController {
     public String viewProfileByPath(@PathVariable UUID driverId, HttpServletRequest request,
                                     Authentication authentication, Model model) {
         return viewProfile(driverId.toString(), false, request, authentication, model);
+    }
+
+    @GetMapping("/profile/edit")
+    public String editProfile(Authentication authentication, Model model) {
+        if (navigation.isOperatorOnly(authentication)) {
+            return "redirect:/ui/operator/drivers";
+        }
+        try {
+            model.addAttribute("form", PersonalInfoForm.from(getMyDriverProfileUseCase.getMyDriverProfile()));
+            return "profile-edit";
+        } catch (DriverNotFoundException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            model.addAttribute("errorType", "NOT_FOUND");
+            return "error";
+        }
+    }
+
+    @PostMapping("/profile/edit")
+    public String updateProfile(@Valid @ModelAttribute("form") PersonalInfoForm form, BindingResult bindingResult,
+                                Authentication authentication, Model model, RedirectAttributes flash) {
+        if (navigation.isOperatorOnly(authentication)) {
+            return "redirect:/ui/operator/drivers";
+        }
+        if (bindingResult.hasErrors()) {
+            return "profile-edit";
+        }
+        try {
+            updateMyPersonalInfo.updatePersonalInfo(form.toPersonalInfo(), form.getVersion());
+            flash.addFlashAttribute("success", "Datos personales actualizados.");
+            return "redirect:/ui/profile";
+        } catch (IllegalArgumentException | VersionMismatchException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            return "profile-edit";
+        }
     }
 }

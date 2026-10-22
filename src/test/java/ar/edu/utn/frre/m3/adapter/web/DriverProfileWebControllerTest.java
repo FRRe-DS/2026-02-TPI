@@ -4,6 +4,7 @@ import ar.edu.utn.frre.m3.adapter.security.RoleNavigation;
 import ar.edu.utn.frre.m3.application.exception.DriverNotFoundException;
 import ar.edu.utn.frre.m3.application.port.in.GetDriverProfileUseCase;
 import ar.edu.utn.frre.m3.application.port.in.GetMyDriverProfileUseCase;
+import ar.edu.utn.frre.m3.application.port.in.UpdateMyPersonalInfoUseCase;
 import ar.edu.utn.frre.m3.domain.Driver;
 import ar.edu.utn.frre.m3.domain.PersonalInfo;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(
@@ -55,6 +57,9 @@ class DriverProfileWebControllerTest {
 
     @MockBean
     private GetDriverProfileUseCase getDriverProfileUseCase;
+
+    @MockBean
+    private UpdateMyPersonalInfoUseCase updateMyPersonalInfo;
 
     private Driver sampleDriver;
     private final UUID driverId = UUID.randomUUID();
@@ -125,5 +130,36 @@ class DriverProfileWebControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("error"))
                 .andExpect(model().attributeExists("errorMessage"));
+    }
+
+    @Test
+    @DisplayName("GET /ui/profile/edit muestra el formulario con los datos actuales")
+    void shouldRenderPersonalInfoEditForm() throws Exception {
+        when(getMyDriverProfileUseCase.getMyDriverProfile()).thenReturn(sampleDriver);
+
+        mockMvc.perform(get("/ui/profile/edit").principal(authentication("driver", "ROLE_DRIVER")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("profile-edit"))
+                .andExpect(model().attribute("form", org.hamcrest.Matchers.hasProperty("dni", org.hamcrest.Matchers.is("42158963"))));
+    }
+
+    @Test
+    @DisplayName("POST /ui/profile/edit guarda los datos personales y vuelve al perfil")
+    void shouldUpdatePersonalInfo() throws Exception {
+        mockMvc.perform(post("/ui/profile/edit").principal(authentication("driver", "ROLE_DRIVER"))
+                        .param("firstName", "Lautaro")
+                        .param("lastName", "González")
+                        .param("dni", "42158963")
+                        .param("birthDate", "1999-08-20")
+                        .param("address", "Av. Castelli 950")
+                        .param("phone", "+54 362 4558899")
+                        .param("email", "lautaro.gonzalez@example.com")
+                        .param("version", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/ui/profile"))
+                .andExpect(flash().attribute("success", "Datos personales actualizados."));
+
+        org.mockito.Mockito.verify(updateMyPersonalInfo).updatePersonalInfo(
+                org.mockito.ArgumentMatchers.any(PersonalInfo.class), org.mockito.ArgumentMatchers.eq(1L));
     }
 }
