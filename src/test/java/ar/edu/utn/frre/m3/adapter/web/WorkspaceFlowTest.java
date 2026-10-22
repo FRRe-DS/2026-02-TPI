@@ -99,7 +99,12 @@ class WorkspaceFlowTest {
         assertEquals(DocumentStatus.PENDING,doc.getStatus());
         mvc.perform(get("/ui/documents").with(user(subject))).andExpect(status().isOk()).andExpect(content().string(containsString("INSURANCE")));
         mvc.perform(get("/ui/operator/drivers/"+driverId).with(user(subject).roles("OPERATOR")))
-            .andExpect(status().isOk()).andExpect(content().string(containsString("Guardar revisión")));
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Documentación del conductor")))
+            .andExpect(content().string(containsString("Documentación de vehículos")))
+            .andExpect(content().string(containsString("Seguro")))
+            .andExpect(content().string(containsString("Toyota Corolla · AB123CD")))
+            .andExpect(content().string(containsString("Guardar revisión")));
         long version=drivers.findById(driverId).orElseThrow().getVersion();
         mvc.perform(post("/ui/operator/drivers/"+driverId+"/documents/"+doc.getId()+"/review")
                 .with(user(subject).roles("OPERATOR")).with(csrf()).param("decision","APPROVED").param("reason","Documentación verificada").param("version",Long.toString(version)))

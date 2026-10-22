@@ -117,10 +117,18 @@ public class WorkspaceWebController {
         model.addAttribute("drivers",workspace.allDrivers()); return page(model,"operator","Conductores");
     }
     @GetMapping("/ui/operator/drivers/{id}") public String detail(@PathVariable UUID id,Model model) {
-        workspace.requireOperator(); model.addAttribute("driver",workspace.driver(id));
-        model.addAttribute("vehicles",workspace.vehicles(id)); model.addAttribute("documents",workspace.documents(id));
+        workspace.requireOperator();
+        Driver driver=workspace.driver(id);
+        var vehicles=workspace.vehicles(id);
+        var documents=workspace.documents(id);
+        model.addAttribute("driver",driver);
+        model.addAttribute("vehicles",vehicles);
+        model.addAttribute("documents",documents);
+        model.addAttribute("driverStatusLabel",OperatorReviewViewModel.statusLabel(
+                driver.getQualificationStatus()!=null ? driver.getQualificationStatus().name() : null));
+        model.addAttribute("review",OperatorReviewViewModel.from(vehicles,documents));
         var decisions=new ArrayList<>(qualification.history(id,null,0,100));
-        for(var v:workspace.vehicles(id)) decisions.addAll(qualification.history(id,v.getId(),0,100));
+        for(var v:vehicles) decisions.addAll(qualification.history(id,v.getId(),0,100));
         decisions.sort(java.util.Comparator.comparing(QualificationDecision::occurredAt).reversed());
         model.addAttribute("decisions",decisions);
         model.addAttribute("idempotencyKey",UUID.randomUUID().toString());
