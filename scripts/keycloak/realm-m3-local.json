@@ -70,6 +70,32 @@
         { "type": "password", "value": "m3-operator-local", "temporary": false }
       ],
       "realmRoles": [ "OPERATOR" ]
+    },
+    {
+      "id": "eec92a34-9ac1-4d78-b0fd-784c25fd5fdd",
+      "username": "m3-alta-prueba",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "m3-alta-prueba@example.com",
+      "firstName": "Alta",
+      "lastName": "Sin Perfil",
+      "credentials": [
+        { "type": "password", "value": "m3-alta-prueba-local", "temporary": false }
+      ],
+      "realmRoles": [ "DRIVER" ]
+    },
+    {
+      "id": "ad7b869b-18d8-41a0-baba-ed98a7484794",
+      "username": "m3-alta-prueba-2",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "m3-alta-prueba-2@example.com",
+      "firstName": "Alta",
+      "lastName": "Sin Perfil 2",
+      "credentials": [
+        { "type": "password", "value": "m3-alta-prueba-2-local", "temporary": false }
+      ],
+      "realmRoles": [ "DRIVER" ]
     }
   ]
 }

@@ -29,6 +29,7 @@ Java y Spring Boot · PostgreSQL · Web desde E1 · Docker + Docker Compose
 
 | Bloque de lectura                    | Secciones                                                                                                                                                                               |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Consigna original**                | [Consigna original de cátedra — M3](#consigna-original-de-cátedra--m3)                                                                                                                  |
 | **Por dónde empezamos**              | [0. Interfaces primero](#0-punto-de-partida-interfaces-primero) · [Guía para otros grupos](M3_Interfaces_Integracion.md)                                                                |
 | **Qué vamos a construir**            | [1. Alcance](#1-visión-general-y-alcance) · [2. Tecnologías](#2-tecnologías-del-proyecto) · [3. Arquitectura](#3-arquitectura-y-estructura-del-proyecto)                                |
 | **Cómo nos organizamos**             | [4. Equipos y responsabilidades](#4-equipos-y-responsabilidades) · [5. Interfaz web](#5-interfaz-web-de-m3)                                                                             |
@@ -38,6 +39,86 @@ Java y Spring Boot · PostgreSQL · Web desde E1 · Docker + Docker Compose
 | **Qué queda por acordar**            | [15. Acuerdos pendientes](#15-acuerdos-pendientes) · [Anexo. Referencias y revisiones](#anexo-referencias-y-control-de-revisiones)                                                      |
 
 Los requisitos del enunciado [E], las decisiones propuestas y los acuerdos pendientes se distinguen a lo largo del documento. Los checklists indican trabajo por demostrar, no cumplimiento ya obtenido.
+
+---
+
+## Consigna original de cátedra — M3
+
+> **Fuente:** `README.md` original de la cátedra (Desarrollo de Software 2026).  
+> Texto copiado **literalmente** para conservar la trazabilidad entre lo que pidió la cátedra y las decisiones de arquitectura de este documento. No se resume, reinterpreta, corrige ni adapta.
+
+### Responsabilidad original de M3
+
+| **ID** | **Módulo** | **Responsabilidad** | **Integraciones clave** |
+|---|---|---|---|
+| **M3** | **Conductores y Vehículos** | Perfil, habilitación, vehículos, documentación y estado operativo. | M1, M4, M5, M6. |
+
+### Requerimientos funcionales originales de M3
+
+| **ID** | **Requerimiento** | **Descripción funcional** |
+|---|---|---|
+| RF-3.1 | Perfil de conductor | El sistema deberá permitir crear y consultar los datos del conductor y su estado de habilitación. |
+| RF-3.2 | Vehículos Auto y Moto | El sistema deberá permitir registrar uno o más vehículos e indicar los tipos de servicio para los que se encuentran habilitados. |
+| RF-3.3 | Documentación | El sistema deberá registrar metadatos de licencia, seguro y documentación del vehículo, incluyendo vencimientos. |
+| RF-3.4 | Habilitación | Un operador autorizado deberá poder aprobar, observar, suspender o rechazar una habilitación con motivo trazable. |
+| RF-3.5 | Estado operativo | El sistema deberá impedir que un conductor o vehículo no habilitado participe del despacho. |
+| RF-3.6 | Disponibilidad | El conductor deberá poder declararse conectado o desconectado y disponible o no disponible, coordinando ese estado con M4. |
+| RF-3.7 | Calificación del cliente | El conductor deberá poder valorar al cliente después de un viaje completado, evitando registros duplicados. |
+
+### Reglas generales originales aplicables a M3
+
+- Cada módulo será propietario de sus datos y colaborará mediante APIs o eventos.
+- La ausencia o demora de un servicio externo deberá producir un comportamiento explícito, nunca un bloqueo indefinido.
+
+> En este repositorio se deberán definir todas las interfaces entre los diferentes módulos que contiene el enunciado. Para ello se deberá utilizar [OpenAPI Specification](https://swagger.io/specification/).
+
+### Módulos relacionados según la consigna original
+
+| **ID** | **Módulo** | **Responsabilidad** | **Integraciones clave** |
+|---|---|---|---|
+| **M1** | **Identidad y Acceso** | Credenciales, autenticación, roles, permisos y revocación. | Todos los módulos protegidos. |
+| **M4** | **Ubicación y Disponibilidad** | Posición vigente, disponibilidad, proximidad, distancia y ETA (Estimated Time of Arrival / Tiempo Estimado de Llegada). | M3, M5, mapas. |
+| **M5** | **Solicitud y Despacho** | Solicitudes inmediatas o activadas por reserva, candidatos, ofertas y asignación única. | M2, M3, M4, M6, M9. |
+| **M6** | **Viajes y Ciclo de Vida** | Estados, arribo, inicio, finalización, cancelación y auditoría. | M5, M7, M8. |
+
+### Requerimientos no funcionales originales
+
+| **ID** | **Atributo** | **Condición mínima** | **Etapa** |
+|---|---|---|---|
+| RNF-01 | Libertad tecnológica | Lenguaje y framework a elección del grupo, con aprobación y justificación técnica. | TP1 |
+| RNF-02 | Arquitectura modular | Nueve servicios con límites y responsabilidades explícitas. Dos implementaciones independientes por módulo cuando la matrícula lo permita. | TP1 |
+| RNF-03 | Contratos | APIs síncronas definidas con OpenAPI y errores consistentes. Eventos documentados en un catálogo común. | TP1 |
+| RNF-04 | Contenedores | Cada módulo y dependencia deberá ejecutarse mediante imágenes OCI reproducibles y versionadas. | TP1 |
+| RNF-05 | Propiedad de datos | Cada servicio controlará su persistencia. Quedará prohibido consultar directamente tablas de otro módulo. | TP1-TP2 |
+| RNF-06 | Configuración y secretos | URLs, puertos, credenciales y claves se configurarán externamente y no se almacenarán en el repositorio. | TP1 |
+| RNF-07 | Pruebas | Pruebas unitarias y de integración desde TP1, de integración distribuida en TP2 y End-to-End en TP3. | TP1-TP3 |
+| RNF-08 | Concurrencia | La solución impedirá doble asignación, doble activación, doble finalización y doble cobro ante solicitudes concurrentes. | TP1-TP3 |
+| RNF-09 | Idempotencia | Operaciones críticas y consumidores de mensajes tolerarán reintentos sin duplicar efectos. | TP2 |
+| RNF-10 | Mensajería | Se utilizará RabbitMQ o alternativa aprobada para flujos asíncronos acordados. | TP2 |
+| RNF-11 | Caché y vencimiento | Redis o alternativa aprobada administrará estado efímero, TTL e invalidación cuando corresponda. | TP2 |
+| RNF-12 | Seguridad | Autenticación, autorización, validación, HTTPS en entornos publicados y controles básicos de vulnerabilidades web. | TP2-TP3 |
+| RNF-13 | Resiliencia | Timeouts, reintentos limitados y tratamiento explícito de indisponibilidad sin bloqueos indefinidos. | TP2-TP3 |
+| RNF-14 | Salud y diagnóstico | Health checks, logs estructurados y correlación por identificador de solicitud, viaje o reserva. | TP2-TP3 |
+| RNF-15 | Usabilidad | Cliente responsivo con estados claros de espera, confirmación, rechazo, cancelación, error y recuperación. | TP3 |
+| RNF-16 | Performance | El consorcio definirá y medirá al menos una meta del recorrido crítico. | TP3 |
+| RNF-17 | Automatización | El repositorio ejecutará build y pruebas automáticamente. La publicación de imágenes será recomendada mediante pipeline. | TP2-TP3 |
+| RNF-18 | Portabilidad | La solución completa se ejecutará localmente y podrá publicarse en cloud sin modificar el código de negocio. | TP3 |
+| RNF-19 | Privacidad y auditoría | No se expondrán datos sensibles en logs, QR o URLs. Las operaciones críticas conservarán trazabilidad. | TP3 |
+| RNF-20 | Documentación | README, diagramas, contratos, decisiones y procedimientos deberán mantenerse junto con la versión correspondiente. | TP1-TP3 |
+
+### Trazabilidad entre la consigna y esta arquitectura
+
+> La siguiente tabla es propia de este documento. No forma parte de la consigna: sólo permite navegar desde cada requisito original hacia la sección donde se explica nuestra implementación.
+
+| Requisito original | Implementación / sección de arquitectura |
+|---|---|
+| RF-3.1 | [Perfil](#12-funcionalidades-por-entrega) |
+| RF-3.2 | [Vehículos](#12-funcionalidades-por-entrega) |
+| RF-3.3 | [Documentación](#63-documentación-y-revisiones) |
+| RF-3.4 | [Habilitación](#65-estados-y-decisiones-de-habilitación) |
+| RF-3.5 | [Estado operativo / elegibilidad](#66-condiciones-de-elegibilidad) |
+| RF-3.6 | [Disponibilidad](#67-disponibilidad-solicitada-y-estado-efectivo) |
+| RF-3.7 | [Valoraciones](#68-valoraciones-de-clientes) |
 
 ---
 

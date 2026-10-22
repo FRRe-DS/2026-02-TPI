@@ -51,11 +51,17 @@ local.
 | Consola de Keycloak | `admin` | `ds2025` | Administrador del realm |
 | Perfil de conductor | `m3-demo` | `m3-demo-local` | `DRIVER` |
 | Pantallas administrativas | `m3-operator` | `m3-operator-local` | `OPERATOR` |
+| Alta de perfil (sin perfil previo) | `m3-alta-prueba` | `m3-alta-prueba-local` | `DRIVER` |
+| Alta de perfil (sin perfil previo) | `m3-alta-prueba-2` | `m3-alta-prueba-2-local` | `DRIVER` |
 
 La consola se encuentra en [http://localhost:8080](http://localhost:8080).
 Para iniciar M3 como conductor u operador, abrir
 [http://localhost:3003](http://localhost:3003), elegir **Ingresar con M1** e
 ingresar con la cuenta correspondiente.
+
+Las dos cuentas de **Alta de perfil** no tienen un registro en M3. Al iniciar
+sesión con cualquiera de ellas, usar **Crear perfil** o abrir
+`/ui/register` para probar el alta desde cero.
 
 Para recorrer un perfil local sin autenticar contra M1, habilitar la simulación
 sólo en desarrollo con `DEMO_ACCESS_ENABLED=true` y
