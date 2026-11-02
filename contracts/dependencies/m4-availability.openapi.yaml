@@ -4,6 +4,43 @@ info:
   version: 0.2.0
   description: Contrato consumido por M3; requiere acuerdo con M4.
 paths:
+  /api/v1/drivers/{driverId}/location:
+    put:
+      summary: Actualizar la última ubicación conocida del conductor desde M3
+      description: >-
+        M3 envía posiciones GPS o simuladas. M4 es dueño de ubicación vigente, proximidad, despacho y disponibilidad
+        efectiva. available representa la intención de M3 y se informa false mientras el conductor tenga un viaje
+        asignado o en curso. M4 sigue siendo el dueño de la disponibilidad efectiva.
+      x-required-service-scopes: [m4:location:write]
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [driverId, enabled, connected, available, latitude, longitude, recordedAt]
+              properties:
+                driverId: {type: string, format: uuid}
+                vehicleId: {type: string, format: uuid, nullable: true}
+                enabled: {type: boolean, description: Conductor y vehículo habilitados según M3.}
+                vehicleType: {type: string, nullable: true, enum: [AUTO, MOTO]}
+                connected: {type: boolean}
+                available: {type: boolean, description: Intención de M3, temporalmente desactivada mientras el conductor está ocupado. M4 conserva la disponibilidad efectiva.}
+                latitude: {type: number, format: double, minimum: -90, maximum: 90}
+                longitude: {type: number, format: double, minimum: -180, maximum: 180}
+                recordedAt: {type: string, format: date-time}
+      responses:
+        '204': {description: Ubicación recibida.}
+        '400': {description: Coordenadas o datos inválidos.}
+        '401': {description: Token técnico inválido.}
+        '403': {description: Falta el scope m4:location:write.}
+        '503': {description: M4 no disponible temporalmente.}
+
   /api/v1/drivers/{driverId}/availability-intent:
     put:
       summary: Notificar intención de disponibilidad desde M3

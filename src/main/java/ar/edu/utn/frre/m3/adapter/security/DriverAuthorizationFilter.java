@@ -20,7 +20,11 @@ public class DriverAuthorizationFilter extends OncePerRequestFilter {
         if(mode.enabled() && !principal.isAuthenticated()) { chain.doFilter(request,response);return; }
         try {
             if(path.startsWith("/api/v1/integration/")) {
-                String scope=path.endsWith("/summary") ? "SCOPE_m3:drivers:read":"SCOPE_m3:eligibility:read";
+                String scope;
+                if(path.endsWith("/m6/trips/completed")) scope="SCOPE_m6:trip:completed:write";
+                else if(path.endsWith("/m5/offers")) scope="SCOPE_m5:offers:write";
+                else if(path.endsWith("/summary")) scope="SCOPE_m3:drivers:read";
+                else scope="SCOPE_m3:eligibility:read";
                 if(!principal.hasRole(scope) && !access.operator()) throw new DriverAccessDeniedException("Scope de integración insuficiente.");
             } else {
                 if(!mode.enabled() && !(principal.hasRole("DRIVER") || principal.hasRole("CONDUCTOR") || access.operator()))

@@ -1,6 +1,7 @@
 package ar.edu.utn.frre.m3.adapter.persistence.repository;
 
 import ar.edu.utn.frre.m3.adapter.persistence.entity.AvailabilityIntentJpaEntity;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,6 @@ public interface SpringDataAvailabilityIntentRepository
     extends JpaRepository<AvailabilityIntentJpaEntity, UUID> {
 
     Optional<AvailabilityIntentJpaEntity> findByDriverId(UUID driverId);
+
+    List<AvailabilityIntentJpaEntity> findByConnectedTrue();
 }

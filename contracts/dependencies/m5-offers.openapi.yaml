@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: M5 — Respuesta del conductor a ofertas (Propuesta de Interfaz)
+  version: 0.1.0
+  description: Contrato consumido por M3; requiere acuerdo e implementación de M5.
+paths:
+  /api/v1/offers/{offerId}/driver-response:
+    post:
+      summary: Registrar aceptación o rechazo del conductor
+      x-required-service-scopes: [m5:offers:respond]
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [driverId, decision]
+              properties:
+                driverId: {type: string, format: uuid}
+                decision: {type: string, enum: [ACCEPTED, REJECTED]}
+      responses:
+        '200':
+          description: Respuesta registrada; en una aceptación contiene el viaje asignado por M5.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, enum: [ACCEPTED, REJECTED]}
+                  tripId: {type: string, maxLength: 128, nullable: true}
+        '404': {description: Oferta desconocida o no asignada al conductor.}
+        '409': {description: Oferta ya vencida o respondida.}
+        '503': {description: M5 no disponible temporalmente.}

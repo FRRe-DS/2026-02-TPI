@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,6 +54,11 @@ public class AvailabilityIntentPersistenceAdapter
     @Override
     public Optional<AvailabilityIntent> findByDriverId(UUID driverId) {
         return intentRepo.findByDriverId(driverId).map(this::toDomain);
+    }
+
+    @Override
+    public List<AvailabilityIntent> findConnected() {
+        return intentRepo.findByConnectedTrue().stream().map(this::toDomain).toList();
     }
 
     @Override

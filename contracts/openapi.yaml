@@ -665,6 +665,78 @@ paths:
         '429': {$ref: '#/components/responses/Error429'}
         '503': {$ref: '#/components/responses/Error503'}
 
+  /api/v1/integration/m5/offers:
+    post:
+      operationId: receiveM5DriverOffer
+      summary: Recibir una oferta de viaje ya despachada por M5
+      description: M5 conserva la búsqueda y asignación. M3 sólo presenta la oferta al conductor y recibe su respuesta.
+      tags: [Integration]
+      x-planned-delivery: E2
+      x-required-service-scopes: ['m5:offers:write']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [offerId, driverId, requestId, pickupAddress, destinationAddress, vehicleType, expiresAt]
+              properties:
+                offerId: {type: string, format: uuid}
+                driverId: {type: string, format: uuid}
+                requestId: {type: string, minLength: 1, maxLength: 128}
+                pickupAddress: {type: string, minLength: 1, maxLength: 240}
+                destinationAddress: {type: string, minLength: 1, maxLength: 240}
+                vehicleType: {type: string, minLength: 1, maxLength: 40}
+                expiresAt: {type: string, format: date-time}
+      responses:
+        '202': {description: Oferta recibida para el conductor.}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '422': {$ref: '#/components/responses/Error422'}
+        '503': {$ref: '#/components/responses/Error503'}
+
+  /api/v1/integration/m6/trips/completed:
+    post:
+      operationId: receiveM6CompletedTripLocation
+      summary: Recibir destino de un viaje finalizado informado por M6
+      description: >-
+        M6 notifica el destino final del conductor. M3 reemplaza la posición simulada y publica esa ubicación a M4.
+        Sólo acepta estado FINALIZADO; el identificador del conductor de M3 es UUID.
+      tags: [Integration]
+      x-planned-delivery: E1
+      x-required-service-scopes: ['m6:trip:completed:write']
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationId'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tripId, driverId, status, destination]
+              properties:
+                tripId: {type: string, minLength: 1, maxLength: 128}
+                driverId: {type: string, format: uuid}
+                status: {type: string, enum: [FINALIZADO]}
+                completedAt: {type: string, format: date-time, nullable: true}
+                driverRating: {type: integer, minimum: 1, maximum: 5, nullable: true}
+                destination:
+                  type: object
+                  required: [latitude, longitude]
+                  properties:
+                    latitude: {type: number, format: double, minimum: -90, maximum: 90}
+                    longitude: {type: number, format: double, minimum: -180, maximum: 180}
+      responses:
+        '202': {description: Destino aplicado a la simulación y enviado a M4.}
+        '400': {$ref: '#/components/responses/Error400'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/Error403'}
+        '404': {$ref: '#/components/responses/Error404'}
+        '503': {$ref: '#/components/responses/Error503'}
+
   /api/v1/drivers/{driverId}/customer-ratings:
     parameters:
       - {$ref: '#/components/parameters/DriverId'}

@@ -4,6 +4,62 @@ info:
   version: 0.2.0
   description: Contrato consumido por M3; requiere acuerdo con M6.
 paths:
+  /api/v1/trips/{tripId}/start:
+    post:
+      summary: Confirmar inicio del viaje
+      description: M3 llama cuando el conductor confirma que el pasajero está a bordo.
+      x-required-service-scopes: [m6:trip:lifecycle:write]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: {type: string, maxLength: 128}
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [driverId]
+              properties:
+                driverId: {type: string, format: uuid}
+      responses:
+        '204': {description: Viaje iniciado.}
+        '404': {description: Viaje inexistente o no asignado al conductor.}
+        '409': {description: El estado actual no permite iniciar el viaje.}
+        '503': {description: M6 no disponible temporalmente.}
+  /api/v1/trips/{tripId}/complete:
+    post:
+      summary: Solicitar finalización del viaje
+      description: M6 conserva el ciclo de vida y notificará el destino final a M3 al completar el viaje.
+      x-required-service-scopes: [m6:trip:lifecycle:write]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: {type: string, maxLength: 128}
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [driverId]
+              properties:
+                driverId: {type: string, format: uuid}
+      responses:
+        '204': {description: Solicitud de finalización aceptada.}
+        '404': {description: Viaje inexistente o no asignado al conductor.}
+        '409': {description: El estado actual no permite finalizar el viaje.}
+        '503': {description: M6 no disponible temporalmente.}
   /api/v1/trips/{tripId}/rating-context:
     get:
       summary: Consultar contexto de viaje completado para valoración de cliente

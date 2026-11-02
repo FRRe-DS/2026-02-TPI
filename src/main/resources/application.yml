@@ -98,11 +98,17 @@ springdoc:
 m3:
   integration:
     m4-base-url: ${M4_BASE_URL:http://localhost:4004}
+    m5-base-url: ${M5_BASE_URL:http://localhost:5005}
     m6-base-url: ${M6_BASE_URL:http://localhost:6006}
     token-uri: ${OIDC_TECH_TOKEN_URI:}
     client-id: ${OIDC_TECH_CLIENT_ID:}
     client-secret: ${OIDC_TECH_CLIENT_SECRET:}
     worker-enabled: ${M4_WORKER_ENABLED:true}
+
+location-simulator:
+  enabled: ${LOCATION_SIMULATOR_ENABLED:true}
+  interval-ms: ${LOCATION_SIMULATOR_INTERVAL_MS:5000}
+  max-step-meters: ${LOCATION_SIMULATOR_MAX_STEP_METERS:35}
 
 ---
 spring:

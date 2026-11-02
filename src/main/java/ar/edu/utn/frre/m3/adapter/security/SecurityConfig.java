@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.oauth2.jwt.*;
@@ -65,7 +66,11 @@ public class SecurityConfig {
         JwtAuthenticationConverter converter=new JwtAuthenticationConverter();converter.setJwtGrantedAuthoritiesConverter(jwt->authorities(jwt.getClaims(),audience));
         http.securityMatcher("/api/**").csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(a->{if(mode.enabled())a.anyRequest().permitAll();else a.anyRequest().authenticated();})
+            .authorizeHttpRequests(a->{if(mode.enabled())a.anyRequest().permitAll();else a
+                    .requestMatchers(HttpMethod.POST,"/api/v1/integration/m5/offers")
+                    .hasAuthority("SCOPE_m5:offers:write")
+                    .requestMatchers(HttpMethod.POST,"/api/v1/integration/m6/trips/completed")
+                    .hasAuthority("SCOPE_m6:trip:completed:write").anyRequest().authenticated();})
             .oauth2ResourceServer(o->o.jwt(j->j.decoder(decoder).jwtAuthenticationConverter(converter)))
             .exceptionHandling(e->e.authenticationEntryPoint((r,s,x)->writeProblem(s,401)).accessDeniedHandler((r,s,x)->writeProblem(s,403)))
             .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
@@ -79,7 +84,7 @@ public class SecurityConfig {
             a.requestMatchers("/","/health/**","/actuator/health/**","/css/**","/js/**","/images/**","/vendor/**","/login/**","/oauth2/**","/demo/access","/demo/operator","/error").permitAll();
             if(mode.enabled()) a.anyRequest().permitAll();
             else a.requestMatchers("/ui/operator/**").hasAnyRole("OPERATOR","OPERADOR","ADMIN","ADMINISTRADOR")
-                .requestMatchers("/ui/register/**","/ui/vehicles/**","/ui/documents/**","/ui/qualification/**","/ui/availability/**","/ui/customer-ratings/**","/ui/drivers/**").hasAnyRole("DRIVER","CONDUCTOR")
+                .requestMatchers("/ui/register/**","/ui/vehicles/**","/ui/documents/**","/ui/qualification/**","/ui/availability/**","/ui/customer-ratings/**","/ui/drivers/**","/ui/offers/**","/ui/trip/**").hasAnyRole("DRIVER","CONDUCTOR")
                 .requestMatchers("/ui/**","/").authenticated().anyRequest().denyAll();
         });
         if(!mode.enabled()) {

@@ -72,6 +72,24 @@ class ProductionSecurityTest {
         mvc.perform(get(path).header("Authorization","Bearer "+technical)).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/integration/drivers/"+driver+"/eligibility").header("Authorization","Bearer "+token("owner","DRIVER"))).andExpect(status().isForbidden());
     }
+    @Test void m6TripCompletionRequiresItsDedicatedTechnicalScope() throws Exception {
+        String path="/api/v1/integration/m6/trips/completed";
+        mvc.perform(post(path).header("Authorization","Bearer "+token("m6","m3-service","","",Instant.now().plusSeconds(300),KEY))
+                .contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post(path).header("Authorization","Bearer "+token("m6","m3-service","m6:trip:completed:write","",Instant.now().plusSeconds(300),KEY))
+                .contentType("application/json").content("{}"))
+            .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+    @Test void m5OfferNotificationRequiresItsDedicatedTechnicalScope() throws Exception {
+        String path="/api/v1/integration/m5/offers";
+        mvc.perform(post(path).header("Authorization","Bearer "+token("m5","m3-service","","",Instant.now().plusSeconds(300),KEY))
+                .contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post(path).header("Authorization","Bearer "+token("m5","m3-service","m5:offers:write","",Instant.now().plusSeconds(300),KEY))
+                .contentType("application/json").content("{}"))
+            .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
     @Test void acceptsM1TopLevelRolesClaim() throws Exception {
         mvc.perform(get(path).header("Authorization","Bearer "+tokenWithM1RolesClaim("owner","DRIVER"))).andExpect(status().isOk());
     }

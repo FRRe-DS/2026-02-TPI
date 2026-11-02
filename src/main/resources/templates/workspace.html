@@ -15,6 +15,8 @@
 <a href="/ui/documents"><span class="nav-symbol" aria-hidden="true">▣</span> Documentación</a>
 <a href="/ui/qualification"><span class="nav-symbol" aria-hidden="true">◇</span> Habilitación</a>
 <a href="/ui/availability"><span class="nav-symbol" aria-hidden="true">◎</span> Disponibilidad</a>
+<a href="/ui/offers"><span class="nav-symbol" aria-hidden="true">↗</span> Pedidos</a>
+<a href="/ui/trip"><span class="nav-symbol" aria-hidden="true">⌁</span> Viaje actual</a>
 <a href="/ui/customer-ratings"><span class="nav-symbol" aria-hidden="true">☆</span> Valoraciones</a>
 <a th:if="${showCreateProfile}" href="/ui/register"><span class="nav-symbol" aria-hidden="true">+</span> Crear perfil</a>
 </div>
@@ -63,6 +65,48 @@
 <label class="check"><input type="checkbox" name="connected" value="true" th:checked="${intent != null and intent.connected}"> Quiero conectarme</label>
 <label class="check"><input type="checkbox" name="available" value="true" th:checked="${intent != null and intent.available}"> Quiero recibir viajes</label>
 <button type="submit">Guardar solicitud</button></form></div></section>
+<section th:if="${page == 'offers'}">
+<div class="panel"><h2>Ofertas de viaje</h2>
+<p th:if="${#lists.isEmpty(offers)}">No tenés pedidos pendientes. Las nuevas ofertas de M5 aparecerán acá.</p>
+<div class="cards"><article th:each="offer : ${offers}" class="vehicle offer-card">
+<span class="status-pill" data-status="PENDING">Nuevo pedido</span>
+<dl class="detail-grid"><div><dt>Origen</dt><dd th:text="${offer.pickupAddress}"></dd></div>
+<div><dt>Destino</dt><dd th:text="${offer.destinationAddress}"></dd></div>
+<div><dt>Tipo de vehículo</dt><dd th:text="${offer.vehicleType}"></dd></div>
+<div><dt>Vence</dt><dd th:text="${offer.expiresAt}"></dd></div></dl>
+<div class="actions"><form method="post" th:action="@{/ui/offers/{id}/decision(id=${offer.offerId})}">
+<input type="hidden" name="decision" value="REJECTED"><button type="submit" class="secondary">Rechazar</button></form>
+<form method="post" th:action="@{/ui/offers/{id}/decision(id=${offer.offerId})}">
+<input type="hidden" name="decision" value="ACCEPTED"><button type="submit">Aceptar</button></form></div>
+</article></div></div></section>
+<section th:if="${page == 'trip'}">
+<div class="panel" th:if="${trip == null}"><h2>No tenés un viaje asignado</h2>
+<p>Cuando aceptes un pedido de M5, el estado del viaje aparecerá en esta pantalla.</p><a class="button" href="/ui/offers">Ver pedidos</a></div>
+<div class="panel" th:if="${trip != null}">
+<div class="heading-row"><div><span class="status-pill" th:attr="data-status=${trip.status}" th:text="${trip.status}"></span>
+<h2 th:if="${trip.status.name() == 'ASSIGNED'}">Viaje asignado · esperando pasajero</h2>
+<h2 th:if="${trip.status.name() == 'IN_PROGRESS'}">Viaje en curso</h2>
+<h2 th:if="${trip.status.name() == 'FINALIZADO'}">✓ Viaje finalizado</h2></div></div>
+<p><strong>Origen:</strong> <span th:text="${trip.offer.pickupAddress}"></span></p>
+<p><strong>Destino:</strong> <span th:text="${trip.offer.destinationAddress}"></span></p>
+<p><strong>Identificador:</strong> <span th:text="${trip.tripId}"></span></p>
+<form th:if="${trip.status.name() == 'ASSIGNED'}" method="post" th:action="@{/ui/trip/{id}/start(id=${trip.tripId})}">
+<button type="submit">Pasajero a bordo / Iniciar viaje</button></form>
+<div th:if="${trip.status.name() == 'IN_PROGRESS'}" id="trip-location" data-poll-ms="5000">
+<h3>Ubicación simulada</h3><p>Latitud: <strong id="location-latitude" th:text="${location == null ? 'Esperando primera posición…' : location.latitude}"></strong></p>
+<p>Longitud: <strong id="location-longitude" th:text="${location == null ? 'Esperando primera posición…' : location.longitude}"></strong></p>
+<p>Actualizada: <time id="location-updated" th:text="${location == null ? 'Esperando actualización' : location.recordedAt}"></time></p>
+<p id="location-sync" th:class="${location != null and location.m4Synced ? 'notice success' : 'notice'}" th:text="${location != null and location.m4Synced ? '✓ Ubicación sincronizada con M4' : 'Enviando ubicación a M4'}"></p>
+<p class="hint">Ubicación simulada para fines de demostración.</p>
+<form method="post" th:action="@{/ui/trip/{id}/complete(id=${trip.tripId})}"><button type="submit" class="secondary">Finalizar viaje</button></form>
+</div>
+<div th:if="${trip.status.name() == 'FINALIZADO'}"><h3>Última ubicación</h3>
+<p><span th:text="${trip.destination.latitude}"></span>, <span th:text="${trip.destination.longitude}"></span></p>
+<p>Puntuación recibida: <strong th:text="${trip.driverRating == null ? 'Pendiente' : trip.driverRating + '/5'}"></strong></p>
+<p th:if="${ratingSummary.count > 0}">Promedio recibido: <strong th:text="${#numbers.formatDecimal(ratingSummary.average, 1, 1) + '/5'}"></strong>
+· <span th:text="${ratingSummary.count}"></span> valoraciones</p>
+<a class="button" href="/ui/offers">Volver a pedidos</a></div>
+</div></section>
 <section th:if="${page == 'operator'}" class="panel"><h2>Perfiles registrados</h2>
 <p th:if="${#lists.isEmpty(drivers)}">No hay conductores registrados.</p><div class="table-wrap"><table><thead><tr><th>Conductor</th><th>Estado</th><th>Acción</th></tr></thead>
 <tbody><tr th:each="d : ${drivers}"><td th:text="${d.displayName}"></td><td th:text="${d.qualificationStatus}"></td>
@@ -131,4 +175,5 @@
 <td><span class="status-pill" th:attr="data-status=${h.status}" th:text="${h.statusLabel}"></span></td>
 <td th:text="${h.validUntil}"></td><td th:text="${h.current ? 'Sí' : 'No'}"></td></tr></tbody></table></div></div>
 </th:block>
+<script th:if="${page == 'trip'}" defer src="/js/driver-trip.js"></script>
 </body></html>

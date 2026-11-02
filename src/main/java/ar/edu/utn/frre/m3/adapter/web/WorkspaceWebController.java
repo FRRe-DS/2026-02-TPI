@@ -4,6 +4,10 @@ import ar.edu.utn.frre.m3.application.usecase.*;
 import ar.edu.utn.frre.m3.application.exception.DriverAccessDeniedException;
 import ar.edu.utn.frre.m3.adapter.security.DevelopmentMode;
 import ar.edu.utn.frre.m3.adapter.security.DemoAccessAuthenticationFilter;
+import ar.edu.utn.frre.m3.application.location.LocationSimulationService;
+import ar.edu.utn.frre.m3.application.trip.DriverOffer;
+import ar.edu.utn.frre.m3.application.trip.DriverTrip;
+import ar.edu.utn.frre.m3.application.trip.DriverTripWorkflowService;
 import ar.edu.utn.frre.m3.domain.*;
 import ar.edu.utn.frre.m3.domain.exception.*;
 import java.time.LocalDate;
@@ -28,13 +32,17 @@ public class WorkspaceWebController {
     private final ReviewDocumentUseCase reviews;
     private final CreateDriverProfileUseCase createDriver;
     private final DevelopmentMode developmentMode;
+    private final DriverTripWorkflowService tripWorkflow;
+    private final LocationSimulationService locationSimulation;
     @Value("${app.demo-access.enabled:false}") private boolean demoAccessEnabled;
     @Value("${app.demo-access.subject:}") private String demoAccessSubject;
     public WorkspaceWebController(DriverWorkspaceService workspace, RequestAvailabilityUseCase availability,
-            RegisterVehicleDocumentUseCase vehicleDocuments, ReviewDocumentUseCase reviews, CreateDriverProfileUseCase createDriver, QualificationService qualification, CustomerRatingService ratings, ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort delivery, DevelopmentMode developmentMode) {
+            RegisterVehicleDocumentUseCase vehicleDocuments, ReviewDocumentUseCase reviews, CreateDriverProfileUseCase createDriver, QualificationService qualification, CustomerRatingService ratings, ar.edu.utn.frre.m3.application.port.AvailabilityDeliveryPort delivery, DevelopmentMode developmentMode,
+            DriverTripWorkflowService tripWorkflow, LocationSimulationService locationSimulation) {
         this.qualification=qualification; this.ratings=ratings; this.delivery=delivery;
         this.workspace=workspace; this.availability=availability; this.vehicleDocuments=vehicleDocuments;
         this.reviews=reviews; this.createDriver=createDriver; this.developmentMode=developmentMode;
+        this.tripWorkflow=tripWorkflow; this.locationSimulation=locationSimulation;
     }
     @GetMapping("/") public String root(Model model) { return access(model,false); }
     @GetMapping("/login/m1") public String m1Unavailable(Model model) { return access(model,true); }
@@ -160,6 +168,43 @@ public class WorkspaceWebController {
         flash.addFlashAttribute("success","Se programó el reintento de la última solicitud fallida.");
         return "redirect:/ui/availability";
     }
+    @GetMapping("/ui/offers") public String offers(Model model) {
+        UUID driverId=workspace.current().getId();
+        model.addAttribute("offers",tripWorkflow.offersFor(driverId));
+        return page(model,"offers","Pedidos recibidos");
+    }
+    @PostMapping("/ui/offers/{offerId}/decision") public String decideOffer(@PathVariable UUID offerId,
+            @RequestParam String decision,RedirectAttributes flash) {
+        try {
+            DriverOffer updated=tripWorkflow.respond(workspace.current().getId(),offerId,decision);
+            flash.addFlashAttribute("success",updated.status()==DriverOffer.OfferStatus.ACCEPTED
+                    ? "Pedido aceptado. Ya tenés un viaje asignado." : "Pedido rechazado.");
+        } catch(DomainValidationException | IntegrationUnavailableException | IllegalArgumentException ex) {
+            flash.addFlashAttribute("error",ex.getMessage());
+        }
+        return "redirect:/ui/offers";
+    }
+    @GetMapping("/ui/trip") public String trip(Model model) {
+        UUID driverId=workspace.current().getId();
+        model.addAttribute("trip",tripWorkflow.currentTrip(driverId));
+        model.addAttribute("location",locationSimulation.currentLocation(driverId));
+        model.addAttribute("ratingSummary",tripWorkflow.ratingSummary(driverId));
+        return page(model,"trip","Viaje actual");
+    }
+    @GetMapping("/ui/trip/status") @ResponseBody public TripStatusPayload tripStatus() {
+        UUID driverId=workspace.current().getId();
+        return new TripStatusPayload(tripWorkflow.currentTrip(driverId),locationSimulation.currentLocation(driverId));
+    }
+    @PostMapping("/ui/trip/{tripId}/start") public String startTrip(@PathVariable String tripId,RedirectAttributes flash) {
+        try { tripWorkflow.start(workspace.current().getId(),tripId); flash.addFlashAttribute("success","Viaje iniciado."); }
+        catch(DomainValidationException | IntegrationUnavailableException | IllegalArgumentException ex) { flash.addFlashAttribute("error",ex.getMessage()); }
+        return "redirect:/ui/trip";
+    }
+    @PostMapping("/ui/trip/{tripId}/complete") public String completeTrip(@PathVariable String tripId,RedirectAttributes flash) {
+        try { tripWorkflow.requestCompletion(workspace.current().getId(),tripId); flash.addFlashAttribute("success","Se solicitó a M6 finalizar el viaje."); }
+        catch(DomainValidationException | IntegrationUnavailableException | IllegalArgumentException ex) { flash.addFlashAttribute("error",ex.getMessage()); }
+        return "redirect:/ui/trip";
+    }
     @GetMapping("/ui/customer-ratings") public String ratings(Model model) {
         Driver driver=workspace.current(); model.addAttribute("ratings",ratings.history(driver.getId(),0,100));
         model.addAttribute("idempotencyKey",UUID.randomUUID().toString());
@@ -190,4 +235,5 @@ public class WorkspaceWebController {
         session.setAttribute(DemoAccessAuthenticationFilter.SUBJECT_ATTRIBUTE,demoAccessSubject);
         org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
+    public record TripStatusPayload(DriverTrip trip, LocationSimulationService.LocationSnapshot location) {}
 }
