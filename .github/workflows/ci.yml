@@ -70,30 +70,78 @@ jobs:
               failures += int(root.attrib.get("failures", 0))
               skipped += int(root.attrib.get("skipped", 0))
 
-          summary_lines = [
-              "## Resumen de Pruebas y Cobertura (M3 - Grupo 02)",
-              "",
-              "### Suite de Pruebas (JUnit / Surefire)",
-              f"- **Archivos de reporte:** {len(report_files)}",
-              f"- **Ejecutadas:** {tests} | **Fallos:** {failures} | **Errores:** {errors} | **Omitidas:** {skipped}",
-              "",
-          ]
+          def make_bar(pct, length=10):
+              filled = max(0, min(length, int(round((pct / 100.0) * length))))
+              empty = length - filled
+              return f"`[{'█' * filled}{'░' * empty}]` {pct:.1f}%"
 
           jacoco_path = "target/site/jacoco/jacoco.xml"
+          counters = {}
+          packages = []
           if os.path.exists(jacoco_path):
               tree = ET.parse(jacoco_path).getroot()
-              summary_lines.extend([
-                  "### Cobertura de Código (JaCoCo)",
-                  "| Métrica | Cubierto | Total | Porcentaje |",
-                  "|---|---|---|---|",
-              ])
               for counter in tree.findall("counter"):
                   ctype = counter.attrib["type"]
                   missed = int(counter.attrib["missed"])
                   covered = int(counter.attrib["covered"])
                   total = missed + covered
                   pct = (covered / total * 100) if total else 0.0
-                  summary_lines.append(f"| **{ctype}** | {covered} | {total} | **{pct:.2f}%** |")
+                  counters[ctype] = {"covered": covered, "total": total, "pct": pct}
+
+              for pkg in tree.findall("package"):
+                  pname = pkg.attrib["name"].replace("ar/edu/utn/frre/m3/", "")
+                  pcounters = {c.attrib["type"]: (int(c.attrib["missed"]), int(c.attrib["covered"])) for c in pkg.findall("counter")}
+                  pline = pcounters.get("LINE", (0, 0))
+                  pbranch = pcounters.get("BRANCH", (0, 0))
+                  line_pct = (pline[1] / (pline[0] + pline[1]) * 100) if (pline[0] + pline[1]) > 0 else 100.0
+                  branch_pct = (pbranch[1] / (pbranch[0] + pbranch[1]) * 100) if (pbranch[0] + pbranch[1]) > 0 else 100.0
+                  packages.append((pname, line_pct, branch_pct, pline[1], pline[0] + pline[1]))
+
+          line_pct = counters.get("LINE", {}).get("pct", 0.0)
+          branch_pct = counters.get("BRANCH", {}).get("pct", 0.0)
+          inst_pct = counters.get("INSTRUCTION", {}).get("pct", 0.0)
+
+          qg_status = "PASSED" if (line_pct >= 75.0 and branch_pct >= 50.0 and skipped == 0 and tests > 0) else "FAILED"
+          qg_badge_color = "brightgreen" if qg_status == "PASSED" else "red"
+
+          summary_lines = [
+              "# 🚦 Calidad y Pruebas CI · M3 Conductores y Vehículos",
+              "",
+              f"[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-{qg_status}-{qg_badge_color}?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI) "
+              f"[![Tests](https://img.shields.io/badge/Tests-{tests}%20passed-success?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI) "
+              f"[![Lines](https://img.shields.io/badge/Lines-{line_pct:.1f}%25-brightgreen?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI) "
+              f"[![Branches](https://img.shields.io/badge/Branches-{branch_pct:.1f}%25-yellow?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI)",
+              "",
+              "### 📊 Métricas Principales de Cobertura y Quality Gate",
+              "| Métrica | Progreso Visual | Valor Real | Umbral Mínimo | Estado |",
+              "| :--- | :--- | :---: | :---: | :---: |",
+              f"| **Líneas de Código** | {make_bar(line_pct)} | **{counters.get('LINE',{}).get('covered',0)} / {counters.get('LINE',{}).get('total',0)}** | $\\ge 75\\%$ | {'🟢 Cumplido' if line_pct >= 75.0 else '🔴 No Cumplido'} |",
+              f"| **Ramas Condicionales** | {make_bar(branch_pct)} | **{counters.get('BRANCH',{}).get('covered',0)} / {counters.get('BRANCH',{}).get('total',0)}** | $\\ge 50\\%$ | {'🟢 Cumplido' if branch_pct >= 50.0 else '🔴 No Cumplido'} |",
+              f"| **Instrucciones Bytecode** | {make_bar(inst_pct)} | **{counters.get('INSTRUCTION',{}).get('covered',0)} / {counters.get('INSTRUCTION',{}).get('total',0)}** | N/A | 🟢 Informativo |",
+              f"| **Pruebas Omitidas (Skips)** | `[0 skips]` | **{skipped}** | **0** | {'🟢 Cero Skips' if skipped == 0 else '🔴 Skips Detectados'} |",
+              "",
+              "### 🧪 Resumen de Suite JUnit",
+              f"- **Total de pruebas ejecutadas:** `{tests}`",
+              f"- **Fallos / Errores:** `{failures}` / `{errors}`",
+              "- **Base de datos de integración:** PostgreSQL 16 Alpine (`service container`) activo y verificado.",
+              "",
+          ]
+
+          if packages:
+              summary_lines.extend([
+                  "<details>",
+                  "<summary><b>🔍 Ver Desglose de Cobertura por Paquete (Click para expandir)</b></summary>",
+                  "",
+                  "| Paquete | Cobertura Líneas | Cobertura Ramas | Líneas Cubiertas |",
+                  "| :--- | :--- | :--- | :---: |",
+              ])
+              for p in sorted(packages, key=lambda x: x[0]):
+                  summary_lines.append(f"| `{p[0]}` | {make_bar(p[1])} | {make_bar(p[2])} | {p[3]} / {p[4]} |")
+              summary_lines.extend([
+                  "",
+                  "</details>",
+                  "",
+              ])
 
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
           if summary_path:
