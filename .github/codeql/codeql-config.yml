@@ -1,0 +1,9 @@
+name: "M3 CodeQL Config"
+
+queries:
+  - uses: security-extended
+
+paths-ignore:
+  - src/main/resources/static/js/bootstrap.bundle.min.js
+  - src/main/resources/static/css/vendor/**
+  - docs/**
