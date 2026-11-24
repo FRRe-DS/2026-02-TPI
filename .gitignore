@@ -11,6 +11,8 @@ target/
 # Variables de entorno y secretos
 .env
 .env.local
+.env.observability.local
+.env.grafana.local
 *.env
 
 ### STS ###

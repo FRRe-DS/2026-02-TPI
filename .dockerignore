@@ -9,3 +9,5 @@ docs/
 .idea/
 *.log
 .env
+.env.*
+.local/

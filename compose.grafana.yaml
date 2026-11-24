@@ -1,0 +1,12 @@
+# Agregar al Compose de observabilidad cuando exista el stack y sus credenciales.
+services:
+  otel-collector:
+    command:
+      - --config=/etc/otelcol-contrib/config.yaml
+      - --config=/etc/otelcol-contrib/sql.yaml
+      - --config=/etc/otelcol-contrib/grafana.yaml
+    environment:
+      GRAFANA_OTLP_ENDPOINT: ${GRAFANA_OTLP_ENDPOINT:?Configurar endpoint OTLP del stack}
+      GRAFANA_OTLP_AUTH: ${GRAFANA_OTLP_AUTH:?Configurar Basic auth OTLP del stack}
+    volumes:
+      - ./observability/collector-grafana.yaml:/etc/otelcol-contrib/grafana.yaml:ro
