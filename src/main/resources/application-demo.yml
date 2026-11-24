@@ -6,7 +6,7 @@ spring:
     url: jdbc:h2:file:./data/m3-demo;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
-    password: ""
+    password: ${M3_H2_PASSWORD:}
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:

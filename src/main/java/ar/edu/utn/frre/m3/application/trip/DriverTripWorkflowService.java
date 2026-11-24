@@ -133,7 +133,7 @@ public class DriverTripWorkflowService {
         m6.startTrip(tripId, driverId);
         DriverTrip started = trip.withStatus(DriverTrip.TripStatus.IN_PROGRESS, now());
         trips.put(driverId, started);
-        log.info("[TRIP] driver={} trip={} started", driverId, tripId);
+        log.info("[TRIP] driver={} trip={} started", driverId, forLog(tripId));
         return started;
     }
 
@@ -143,7 +143,7 @@ public class DriverTripWorkflowService {
             throw new DomainValidationException("Sólo se puede finalizar un viaje que está en curso.");
         }
         m6.requestTripCompletion(tripId, driverId);
-        log.info("[TRIP] driver={} trip={} completion requested from M6", driverId, tripId);
+        log.info("[TRIP] driver={} trip={} completion requested from M6", driverId, forLog(tripId));
     }
 
     /** Applies M6's final event once, moves to the destination, and sends that point to M4. */
@@ -172,7 +172,7 @@ public class DriverTripWorkflowService {
             if (driverRating != null) {
                 ratings.computeIfAbsent(driverId, key -> new ConcurrentHashMap<>()).putIfAbsent(tripId, driverRating);
             }
-            log.info("[TRIP] driver={} trip={} finalized by M6", driverId, tripId);
+            log.info("[TRIP] driver={} trip={} finalized by M6", driverId, forLog(tripId));
             return completed;
         });
     }
@@ -186,6 +186,11 @@ public class DriverTripWorkflowService {
         if (driverRatings.isEmpty()) return new RatingSummary(0, 0);
         double average = driverRatings.values().stream().mapToInt(Integer::intValue).average().orElse(0);
         return new RatingSummary(average, driverRatings.size());
+    }
+
+    /** Quita saltos de línea de valores externos para que no puedan falsificar líneas de log (CWE-117). */
+    static String forLog(String value) {
+        return value == null ? null : value.replaceAll("[\\r\\n]", "_");
     }
 
     private DriverTrip requireTrip(UUID driverId, String tripId) {

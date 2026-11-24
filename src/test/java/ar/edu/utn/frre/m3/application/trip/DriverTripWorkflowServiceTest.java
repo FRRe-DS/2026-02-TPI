@@ -108,4 +108,11 @@ class DriverTripWorkflowServiceTest {
         assertThrows(DomainValidationException.class, () -> workflow.respond(driverId, offerId, "ACCEPTED"));
         verifyNoInteractions(m5);
     }
+
+    @Test
+    void forLogRemovesLineBreaksSoExternalIdsCannotForgeLogLines() {
+        assertEquals("trip-1_[TRIP] fake_entry", DriverTripWorkflowService.forLog("trip-1\r[TRIP] fake\nentry"));
+        assertEquals("trip-1", DriverTripWorkflowService.forLog("trip-1"));
+        assertNull(DriverTripWorkflowService.forLog(null));
+    }
 }

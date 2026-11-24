@@ -64,6 +64,9 @@ public class SecurityConfig {
     @Bean @Order(1)
     public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
         JwtAuthenticationConverter converter=new JwtAuthenticationConverter();converter.setJwtGrantedAuthoritiesConverter(jwt->authorities(jwt.getClaims(),audience));
+        // CSRF desactivado sólo en /api/**: la API es STATELESS y se autentica con Bearer JWT
+        // (oauth2ResourceServer), sin cookies de sesión, así que no hay credencial que el navegador
+        // envíe sola. La cadena web (/ui, Order 2) usa sesión y mantiene CSRF activo.
         http.securityMatcher("/api/**").csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a->{if(mode.enabled())a.anyRequest().permitAll();else a
