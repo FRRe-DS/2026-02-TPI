@@ -190,7 +190,8 @@ public class DriverTripWorkflowService {
 
     /** Quita saltos de línea de valores externos para que no puedan falsificar líneas de log (CWE-117). */
     static String forLog(String value) {
-        return value == null ? null : value.replaceAll("[\\r\\n]", "_");
+        // replace() literal: es el patrón que CodeQL reconoce como sanitizador de java/log-injection.
+        return value == null ? null : value.replace("\n", "_").replace("\r", "_");
     }
 
     private DriverTrip requireTrip(UUID driverId, String tripId) {
