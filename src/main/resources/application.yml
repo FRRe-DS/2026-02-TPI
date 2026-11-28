@@ -103,7 +103,14 @@ m3:
     token-uri: ${OIDC_TECH_TOKEN_URI:}
     client-id: ${OIDC_TECH_CLIENT_ID:}
     client-secret: ${OIDC_TECH_CLIENT_SECRET:}
+    # Scope OAuth del token técnico para M4. Vacío: no se envía y M1 aplica los scopes por defecto del cliente.
+    # M4 Grupo 03 autoriza por rol (conductores-be del cliente grupo-02), no por scope.
+    m4-token-scope: ${M4_TOKEN_SCOPE:}
     worker-enabled: ${M4_WORKER_ENABLED:true}
+  security:
+    # Roles o scopes que cuentan como el rol "servicio" del contrato M3 2.0.0 para leer
+    # /api/v1/conductores/{id}/estado, /ubicacion y /vehiculos/{id}. Coma como separador.
+    service-read-roles: ${M3_SERVICE_READ_ROLES:SERVICIO,SCOPE_m3:drivers:read,ubicacion-be,solicitud-be,viajes-be}
 
 location-simulator:
   enabled: ${LOCATION_SIMULATOR_ENABLED:true}

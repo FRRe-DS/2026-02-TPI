@@ -90,6 +90,21 @@ class ProductionSecurityTest {
                 .contentType("application/json").content("{}"))
             .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
+    @Test void m4ServiceIdentityReadsContractStateButHumansOnlyTheirOwn() throws Exception {
+        String estado="/api/v1/conductores/"+driver+"/estado";
+        String m4=token("service-account-grupo-03","m3-service","","ubicacion-be",Instant.now().plusSeconds(300),KEY);
+        mvc.perform(get(estado).header("Authorization","Bearer "+m4)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.estado").value("DESCONECTADO")).andExpect(jsonPath("$.id_conductor").value(driver.toString()));
+        mvc.perform(get("/api/v1/conductores/"+UUID.randomUUID()+"/estado").header("Authorization","Bearer "+m4))
+            .andExpect(status().isNotFound()).andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+            .andExpect(jsonPath("$.codigo").value("NO_ENCONTRADO"));
+        mvc.perform(get(path).header("Authorization","Bearer "+m4)).andExpect(status().isForbidden());
+        mvc.perform(get(estado).header("Authorization","Bearer "+token("owner","DRIVER"))).andExpect(status().isOk());
+        mvc.perform(get(estado).header("Authorization","Bearer "+token("stranger","DRIVER")))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.codigo").value("ACCESO_PROHIBIDO"));
+        mvc.perform(get(estado).header("Authorization","Bearer "+token("other-module","m3-service","","clientes-be",Instant.now().plusSeconds(300),KEY)))
+            .andExpect(status().isForbidden());
+    }
     @Test void acceptsM1TopLevelRolesClaim() throws Exception {
         mvc.perform(get(path).header("Authorization","Bearer "+tokenWithM1RolesClaim("owner","DRIVER"))).andExpect(status().isOk());
     }
