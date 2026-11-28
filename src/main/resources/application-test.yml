@@ -10,7 +10,7 @@ spring:
     url: jdbc:h2:mem:m3_test_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
     username: sa
-    password: ""
+    password: ${M3_H2_PASSWORD:}
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect

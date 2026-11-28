@@ -66,6 +66,9 @@ public class SecurityConfig {
             @org.springframework.beans.factory.annotation.Value("${m3.security.service-read-roles:"+DriverAuthorizationFilter.DEFAULT_SERVICE_READ_ROLES+"}") String serviceReadRoles,
             @org.springframework.beans.factory.annotation.Value("${m3.security.m5-offer-roles:"+DriverAuthorizationFilter.DEFAULT_M5_OFFER_ROLES+"}") String m5OfferRoles) throws Exception {
         JwtAuthenticationConverter converter=new JwtAuthenticationConverter();converter.setJwtGrantedAuthoritiesConverter(jwt->authorities(jwt.getClaims(),audience));
+        // CSRF desactivado sólo en /api/**: la API es STATELESS y se autentica con Bearer JWT
+        // (oauth2ResourceServer), sin cookies de sesión, así que no hay credencial que el navegador
+        // envíe sola. La cadena web (/ui, Order 2) usa sesión y mantiene CSRF activo.
         http.securityMatcher("/api/**").csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a->{if(mode.enabled())a.anyRequest().permitAll();else a

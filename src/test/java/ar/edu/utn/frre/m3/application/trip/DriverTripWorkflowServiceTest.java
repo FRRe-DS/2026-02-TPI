@@ -112,6 +112,13 @@ class DriverTripWorkflowServiceTest {
         verifyNoInteractions(m5);
     }
 
+    @Test
+    void forLogRemovesLineBreaksSoExternalIdsCannotForgeLogLines() {
+        assertEquals("trip-1_[TRIP] fake_entry", DriverTripWorkflowService.forLog("trip-1\r[TRIP] fake\nentry"));
+        assertEquals("trip-1", DriverTripWorkflowService.forLog("trip-1"));
+        assertNull(DriverTripWorkflowService.forLog(null));
+    }
+
     // ── T8 · Fin y cancelación según M6, y ofertas cerradas por M5 ──────────────────────────────
 
     private void anaAcceptsTrip42() {
