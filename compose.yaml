@@ -8,6 +8,8 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ds2025
+      # Issuer estable tanto para el navegador como para las llamadas internas.
+      KC_HOSTNAME: http://localhost:8080
     volumes:
       - ./scripts/keycloak:/opt/keycloak/data/import:ro
     networks:
@@ -27,19 +29,21 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/m3_db
       SPRING_DATASOURCE_USERNAME: m3_user
       SPRING_DATASOURCE_PASSWORD: m3_password
-      OIDC_ISSUER: ${OIDC_ISSUER:-}
-      OIDC_JWKS_URI: ${OIDC_JWKS_URI:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:8080/realms/ds-2025-realm}
+      OIDC_JWKS_URI: ${OIDC_JWKS_URI:-http://keycloak:8080/realms/ds-2025-realm/protocol/openid-connect/certs}
       OIDC_AUTH_URI: ${OIDC_AUTH_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/auth}
-      OIDC_TOKEN_URI: ${OIDC_TOKEN_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/token}
-      OIDC_USERINFO_URI: ${OIDC_USERINFO_URI:-http://localhost:8080/realms/ds-2025-realm/protocol/openid-connect/userinfo}
+      OIDC_TOKEN_URI: ${OIDC_TOKEN_URI:-http://keycloak:8080/realms/ds-2025-realm/protocol/openid-connect/token}
+      OIDC_USERINFO_URI: ${OIDC_USERINFO_URI:-http://keycloak:8080/realms/ds-2025-realm/protocol/openid-connect/userinfo}
       OIDC_TECH_TOKEN_URI: ${OIDC_TECH_TOKEN_URI:-}
       OIDC_TECH_CLIENT_ID: ${OIDC_TECH_CLIENT_ID:-}
       OIDC_TECH_CLIENT_SECRET: ${OIDC_TECH_CLIENT_SECRET:-}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       M4_WORKER_ENABLED: ${M4_WORKER_ENABLED:-true}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-account}
-      OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:-}
+      OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:-m3-web-client}
       OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-}
+      # El realm local importa un cliente público con PKCE.
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_AUTHENTICATION_METHOD: ${OIDC_WEB_CLIENT_AUTH_METHOD:-none}
       SPRING_PROFILES_ACTIVE: docker
       M4_BASE_URL: ${M4_BASE_URL:-http://localhost:4004}
       M4_TOKEN_SCOPE: ${M4_TOKEN_SCOPE:-}
@@ -51,6 +55,8 @@ services:
       M6_TOKEN_SCOPE: ${M6_TOKEN_SCOPE:-}
       M6_SYNC_ENABLED: ${M6_SYNC_ENABLED:-true}
     depends_on:
+      keycloak:
+        condition: service_started
       postgres:
         condition: service_healthy
     networks:

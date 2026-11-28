@@ -16,6 +16,11 @@ COPY src/ src/
 COPY contracts/ contracts/
 RUN ./mvnw clean package -DskipTests -B
 
+# Agente fijado y verificado; sólo se activa cuando JAVA_TOOL_OPTIONS lo solicita.
+ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.34.0/opentelemetry-javaagent.jar /tmp/opentelemetry-javaagent.jar
+RUN echo 'da44154cea128257779c8a782b9651fd7c0c6aa177cd3810f9a867ac8509555d  /tmp/opentelemetry-javaagent.jar' | sha256sum -c - \
+    && chmod 644 /tmp/opentelemetry-javaagent.jar
+
 # Etapa 2: Runtime
 FROM eclipse-temurin:21-jre-alpine AS runner
 WORKDIR /app
@@ -23,6 +28,7 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /build/target/*.jar app.jar
+COPY --from=builder /tmp/opentelemetry-javaagent.jar /opt/otel/opentelemetry-javaagent.jar
 RUN chown -R appuser:appgroup /app
 
 USER appuser

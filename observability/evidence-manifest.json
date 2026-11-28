@@ -1,0 +1,114 @@
+{
+  "date_local": "2026-11-23",
+  "timezone": "America/Buenos_Aires",
+  "verified_metrics": {
+    "registration_success_count": 2,
+    "operational_update_success_count": 6,
+    "available_drivers_gauge": 0
+  },
+  "files": [
+    {
+      "path": ".local/evidence-20261123-204157/durations.json",
+      "bytes": 251,
+      "sha256": "bc28b238380552153091414286c74f1dc8fedef8524c4154d5cdb6a4e19de5a6"
+    },
+    {
+      "path": ".local/evidence-20261123-204157/metrics-after.prom",
+      "bytes": 13332,
+      "sha256": "614d11140284d09ef5bc6a2097dd9e6760d951fb2fa956ece01ea945340da8b3"
+    },
+    {
+      "path": ".local/evidence-20261123-204157/metrics-before.prom",
+      "bytes": 360,
+      "sha256": "6f45f92b0ae034cfee950fbbb74359a0fb9e6d609c6cefb6e2d0b399223a3d58"
+    },
+    {
+      "path": ".local/evidence-20261123-204157/operations.json",
+      "bytes": 2242,
+      "sha256": "5deadeec748253bd380d08f47272ebe15c9af766b2a41d77dd380bf299aa19c0"
+    },
+    {
+      "path": ".local/evidence-20261123-204157/validation-summary.json",
+      "bytes": 798,
+      "sha256": "ff3363d9b64676ce5dc6e9ac865752b592982bd632dfe8692413f0644e9df0a1"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/cloud-histograms.jpg",
+      "bytes": 166061,
+      "sha256": "5c779773146f44e2e19834c6bc3e0b27260688ee63ab4e4f2421250de6ddc1c7"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/cloud-verification.json",
+      "bytes": 3277,
+      "sha256": "fcd96a6fd7c6241c91e5745d43388829eb0970ba3ea3c77feb39020e17dca4b5"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/dashboard-cloud.jpg",
+      "bytes": 127430,
+      "sha256": "a409d2dfb900a78641686d0ae10a5983fc64bce9a65bc35b245307dc830d2618"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/metrics-after.prom",
+      "bytes": 13332,
+      "sha256": "320b2a8f8b105e44070a4d3d89ce5e4cad6a14535f70d06be75f90c80f853ef1"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/metrics-before.prom",
+      "bytes": 13332,
+      "sha256": "614d11140284d09ef5bc6a2097dd9e6760d951fb2fa956ece01ea945340da8b3"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/operations.json",
+      "bytes": 371,
+      "sha256": "a3db09db830e99bf07d7e2f2cba8e4f24a360c09ac998633df9f845b0d493e53"
+    },
+    {
+      "path": ".local/evidence-20261123-205147/tempo-alta.jpg",
+      "bytes": 166075,
+      "sha256": "520367cb5f86e38174c4fdd78bab0ce043abfce10d997d8f6b0a73888e52b82e"
+    },
+    {
+      "path": ".local/evidence-20261123-205307/counter-validation.json",
+      "bytes": 890,
+      "sha256": "91d9b2afb6cbf6c183261842753cf582bc6d5a3ce0d9467d0b7cbdb71fc2748a"
+    },
+    {
+      "path": ".local/evidence-20261123-205307/metrics-after.prom",
+      "bytes": 17399,
+      "sha256": "f859d76df758f07e9cdc4c25d4767947754abbb773fd34aeb3fb3b72f3315075"
+    },
+    {
+      "path": ".local/evidence-20261123-205307/metrics-before.prom",
+      "bytes": 13332,
+      "sha256": "320b2a8f8b105e44070a4d3d89ce5e4cad6a14535f70d06be75f90c80f853ef1"
+    },
+    {
+      "path": ".local/evidence-20261123-205307/operations.json",
+      "bytes": 2044,
+      "sha256": "2c3e66df75594af6b67dbd3f3f1e99cf5c7e4be1f99632107d04382955899ddd"
+    },
+    {
+      "path": ".local/evidence-20261123-205307/tempo-disponibilidad.jpg",
+      "bytes": 173170,
+      "sha256": "e842db586252d5512ade3689848a9848f73daeef1a78c4f72ed7a1c14da3bb30"
+    }
+  ],
+  "dashboard_url": "https://giantbarracuda2583.grafana.net/d/m3-grupo02-observabilidad?from=1795476900000&to=1795478400000&timezone=browser",
+  "metrics_url": "https://giantbarracuda2583.grafana.net/explore?schemaVersion=1&panes=%7B%22x7d%22%3A%7B%22datasource%22%3A%22grafanacloud-prom%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7B__name__%3D~%5C%22m3_driver_.%2A_count%5C%22%2Coutcome%3D%5C%22success%5C%22%2Cjob%3D%5C%22utn-frre%2Fm3-drivers-vehicles%5C%22%7D%22%2C%22range%22%3Atrue%2C%22instant%22%3Atrue%2C%22datasource%22%3A%7B%22type%22%3A%22prometheus%22%2C%22uid%22%3A%22grafanacloud-prom%22%7D%2C%22editorMode%22%3A%22code%22%2C%22legendFormat%22%3A%22__auto%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%221795476900000%22%2C%22to%22%3A%221795478400000%22%7D%2C%22compact%22%3Afalse%7D%7D",
+  "traces": [
+    {
+      "trace_id": "82476cde9886429493cc5a9c910af601",
+      "operation": "POST /api/v1/drivers",
+      "status": 201,
+      "spans": 18,
+      "url": "https://giantbarracuda2583.grafana.net/explore?schemaVersion=1&panes=%7B%22x7d%22%3A%7B%22datasource%22%3A%22grafanacloud-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22grafanacloud-traces%22%7D%2C%22queryType%22%3A%22traceId%22%2C%22serviceMapUseNativeHistograms%22%3Afalse%2C%22query%22%3A%2282476cde9886429493cc5a9c910af601%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%221795476900000%22%2C%22to%22%3A%221795478400000%22%7D%2C%22compact%22%3Afalse%7D%7D"
+    },
+    {
+      "trace_id": "018610a47a63426c81dfff64af3ab9e2",
+      "operation": "PUT /api/v1/drivers/{driverId}/availability-intent",
+      "status": 202,
+      "spans": 43,
+      "url": "https://giantbarracuda2583.grafana.net/explore?schemaVersion=1&panes=%7B%22x7d%22%3A%7B%22datasource%22%3A%22grafanacloud-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22grafanacloud-traces%22%7D%2C%22queryType%22%3A%22traceId%22%2C%22serviceMapUseNativeHistograms%22%3Afalse%2C%22query%22%3A%22018610a47a63426c81dfff64af3ab9e2%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%221795476900000%22%2C%22to%22%3A%221795478400000%22%7D%2C%22compact%22%3Afalse%7D%7D"
+    }
+  ]
+}

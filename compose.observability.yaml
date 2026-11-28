@@ -1,0 +1,33 @@
+# Preparar con python observability/setup-local.py. Uso:
+# docker compose --env-file .env.observability.local -f compose.yaml -f compose.observability.yaml up -d --build
+services:
+  m3-app:
+    environment:
+      JAVA_TOOL_OPTIONS: -javaagent:/opt/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: m3-drivers-vehicles
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=utn-frre,service.version=0.2.0,deployment.environment.name=local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: none
+      OTEL_METRIC_EXPORT_INTERVAL: '30000'
+      OTEL_TRACES_SAMPLER: parentbased_always_on
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.140.0
+    command: ['--config=/etc/otelcol-contrib/config.yaml', '--config=/etc/otelcol-contrib/sql.yaml']
+    restart: unless-stopped
+    volumes:
+      - ./observability/collector-local.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - ./observability/collector-sql.yaml:/etc/otelcol-contrib/sql.yaml:ro
+    environment:
+      OTEL_SQL_PASSWORD: ${OTEL_SQL_PASSWORD:?Ejecutar python observability/setup-local.py y usar --env-file .env.observability.local}
+    ports:
+      - '127.0.0.1:9464:9464'
+    networks:
+      - m3_network
+    # OTLP sólo se expone en la red interna de Compose.
