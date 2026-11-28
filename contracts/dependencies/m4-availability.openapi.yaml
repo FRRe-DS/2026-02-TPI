@@ -1,19 +1,40 @@
 openapi: 3.0.3
 info:
-  title: M4 — Disponibilidad y Despacho (Propuesta de Interfaz)
-  version: 0.2.0
-  description: Contrato consumido por M3; requiere acuerdo con M4.
+  title: M4 — Disponibilidad y Despacho (vista de M3 como consumidor)
+  version: 0.3.0
+  description: >-
+    Operaciones de M4 que consume M3 Grupo 02. Ambas reproducen el contrato publicado por M4 Grupo 03
+    (repositorio FRRe-DS/2026-03-TPI, openapi.yml 1.0.0, commit 35e597e del 27/11/2026) y son las que implementa
+    ExternalModulesClient (send para estado operativo, sendLocation para ubicación). El sentido inverso, M4 → M3,
+    está en contracts/openapi.yaml (lecturas del contrato común M3 2.0.0: estado, ubicación y vehículo).
+  x-fuente-proveedor:
+    repositorio: https://github.com/FRRe-DS/2026-03-TPI
+    archivo: openapi.yml
+    version: 1.0.0
+    commit: 35e597ecaf8fdadae9e347d8511ed7d492e983fe
+  x-contrato-m3-comun:
+    fuente: FRRe-DS/2026-15-TPI docs/contract/openapi.yaml
+    version-recibida: 2.0.0 (rama main, 24/11/2026)
+    version-en-dev: 3.0.0 (PR 126, 27/11/2026); las lecturas que usa M4 no cambian entre ambas
+  x-acuerdos-pendientes:
+    - M4 Grupo 03 todavía no confirmó por escrito que esta sea la versión de integración ni la URL del entorno conjunto.
+    - El contrato de M4 dice que repetir event_id con el mismo body no reaplica el cambio; la implementación responde 409 CONFLICTO_EVENTO_ID. M3 trata ese 409 como confirmación.
+    - M4 Grupo 03 pide el token para leer M3 con las credenciales del cliente grupo-02 (rol conductores-be). M3 Grupo 02 acepta por defecto SERVICIO, ubicacion-be, solicitud-be, viajes-be o el scope m3:drivers:read (variable M3_SERVICE_READ_ROLES); falta acordar qué identidad usa M4.
+    - El 404 de ubicación ("no sincronizado") puede requerir que antes llegue estado-operativo; falta confirmarlo.
 paths:
-  /api/v1/drivers/{driverId}/location:
+  /api/v1/conductores/{conductor_id}/ubicacion:
     put:
-      summary: Actualizar la última ubicación conocida del conductor desde M3
+      operationId: actualizarUbicacionConductor
+      summary: Informar a M4 la ubicación vigente del conductor
       description: >-
-        M3 envía posiciones GPS o simuladas. M4 es dueño de ubicación vigente, proximidad, despacho y disponibilidad
-        efectiva. available representa la intención de M3 y se informa false mientras el conductor tenga un viaje
-        asignado o en curso. M4 sigue siendo el dueño de la disponibilidad efectiva.
-      x-required-service-scopes: [m4:location:write]
+        M3 envía la posición del simulador (o del dispositivo) mientras el conductor está conectado. M4 la guarda con
+        TTL de 30 s desde que la acepta y la usa para buscar candidatos cercanos. Una posición anterior a la vigente no
+        la sobrescribe (409); repetir la misma representación es idempotente. No modifica habilitación ni estado
+        operativo. Reemplaza a PUT /api/v1/drivers/{driverId}/location de la propuesta 0.2.0.
+      x-consumidor: M3 Grupo 02 · ExternalModulesClient.sendLocation · LocationSimulationService
+      x-roles-aceptados-por-m4: [conductores-be, ubicacion-be]
       parameters:
-        - name: driverId
+        - name: conductor_id
           in: path
           required: true
           schema: {type: string, format: uuid}
@@ -23,70 +44,123 @@ paths:
           application/json:
             schema:
               type: object
-              required: [driverId, enabled, connected, available, latitude, longitude, recordedAt]
+              additionalProperties: false
+              required: [latitud, longitud, timestamp_ubicacion]
               properties:
-                driverId: {type: string, format: uuid}
-                vehicleId: {type: string, format: uuid, nullable: true}
-                enabled: {type: boolean, description: Conductor y vehículo habilitados según M3.}
-                vehicleType: {type: string, nullable: true, enum: [AUTO, MOTO]}
-                connected: {type: boolean}
-                available: {type: boolean, description: Intención de M3, temporalmente desactivada mientras el conductor está ocupado. M4 conserva la disponibilidad efectiva.}
-                latitude: {type: number, format: double, minimum: -90, maximum: 90}
-                longitude: {type: number, format: double, minimum: -180, maximum: 180}
-                recordedAt: {type: string, format: date-time}
+                latitud: {type: number, format: double, minimum: -90, maximum: 90}
+                longitud: {type: number, format: double, minimum: -180, maximum: 180}
+                timestamp_ubicacion: {type: string, format: date-time, description: UTC, precisión de microsegundos.}
+            example:
+              latitud: -27.4511
+              longitud: -58.9867
+              timestamp_ubicacion: '2026-11-28T11:15:30.123456Z'
       responses:
-        '204': {description: Ubicación recibida.}
-        '400': {description: Coordenadas o datos inválidos.}
-        '401': {description: Token técnico inválido.}
-        '403': {description: Falta el scope m4:location:write.}
+        '200': {description: La ubicación vigente existente fue reemplazada.}
+        '201': {description: Primer registro de ubicación vigente del conductor.}
+        '400': {description: Solicitud inválida.}
+        '401': {description: Token ausente, vencido o inválido.}
+        '403': {description: El token no tiene conductores-be ni ubicacion-be.}
+        '404': {description: El conductor no está registrado en M4 o no fue sincronizado.}
+        '409': {description: Timestamp anterior al vigente, o mismo timestamp con otras coordenadas.}
+        '422': {description: Cuerpo con campos extra o fuera de rango.}
+        '429': {description: Límite de solicitudes excedido.}
         '503': {description: M4 no disponible temporalmente.}
 
-  /api/v1/drivers/{driverId}/availability-intent:
+  /api/v1/conductores/{conductor_id}/estado-operativo:
     put:
-      summary: Notificar intención de disponibilidad desde M3
+      operationId: actualizarEstadoOperativo
+      summary: Informar a M4 la intención de conexión y disponibilidad registrada en M3
+      description: >-
+        M3 envía el estado completo (connected y available) con identidad de servicio emitida por M1. M4 autoriza por
+        rol de realm: conductores-be (cliente grupo-02) o ubicacion-be; no exige scope. M3 genera un event_id por
+        comando del outbox y lo repite en cada reintento. timestamp_evento es el instante en que el conductor pidió
+        el cambio; M4 rechaza con 409 un evento anterior al vigente. Si connected es false, M4 guarda available=false.
+        Reemplaza a PUT /api/v1/drivers/{driverId}/availability-intent de la propuesta 0.2.0, que M4 no implementa.
+      x-consumidor: M3 Grupo 02 · ExternalModulesClient.send · AvailabilityWorker
+      x-roles-aceptados-por-m4: [conductores-be, ubicacion-be]
+      x-interpretacion-m3:
+        '200': APPLIED si conductor_id, connected y available coinciden con lo enviado.
+        '201': APPLIED con la misma condición (primera proyección del conductor en M4).
+        '409 CONFLICTO_EVENTO_ID': APPLIED (M4 ya tiene ese event_id como estado vigente).
+        '409 CONFLICTO_TIMESTAMP': REJECTED (existe un estado más nuevo).
+        '401, 429, 5xx, timeout o conexión rechazada': RETRY con espera creciente, hasta 6 intentos.
+        '400, 403, 404, 422': REJECTED.
       parameters:
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: {type: string, format: uuid}
-        - name: driverId
+        - name: conductor_id
           in: path
           required: true
-          schema:
-            type: string
-            format: uuid
+          schema: {type: string, format: uuid}
+        - name: X-Request-Id
+          in: header
+          required: false
+          description: M3 envía su X-Correlation-ID para rastrear el pedido en los logs de M4.
+          schema: {type: string, pattern: '^[A-Za-z0-9._-]{1,128}$'}
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [commandId, driverId, vehicleId, connected, available, desiredVersion]
+              additionalProperties: false
+              required: [connected, available]
               properties:
-                commandId: {type: string, format: uuid}
-                driverId: {type: string, format: uuid}
-                connected:
-                  type: boolean
-                available:
-                  type: boolean
-                vehicleId:
-                  type: string
-                  format: uuid
-                desiredVersion:
-                  type: integer
+                event_id: {type: string, format: uuid, description: Enviado siempre por M3; estable entre reintentos.}
+                connected: {type: boolean}
+                available: {type: boolean}
+                timestamp_evento: {type: string, format: date-time, description: Enviado por M3 en UTC con precisión de microsegundos.}
+            example:
+              event_id: 6f1c2d4e-8a9b-4c3d-9e2f-1a2b3c4d5e6f
+              connected: true
+              available: true
+              timestamp_evento: '2026-11-28T11:15:30.123456Z'
       responses:
-        '200':
-          description: Intención aplicada; M4 debe rechazar versiones anteriores y deduplicar commandId.
+        '200': {$ref: '#/components/responses/EstadoOperativoRegistrado'}
+        '201': {$ref: '#/components/responses/EstadoOperativoRegistrado'}
+        '400': {description: Solicitud inválida.}
+        '401': {description: Token ausente, vencido o con firma inválida.}
+        '403': {description: El token no tiene conductores-be ni ubicacion-be.}
+        '409':
+          description: >-
+            code CONFLICTO_EVENTO_ID si el event_id coincide con el vigente; code CONFLICTO_TIMESTAMP si
+            timestamp_evento es anterior al vigente.
           content:
-            application/json:
-              schema:
-                type: object
-                required: [appliedVersion]
-                properties:
-                  appliedVersion: {type: integer, format: int64}
-        '202':
-          description: Recibida pero aún no aplicada; M3 reintentará el mismo comando.
-        '422':
-          description: Rechazo definitivo.
-        '503':
-          description: Indisponibilidad temporal; M3 reintentará.
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problema'}
+        '422': {description: Cuerpo con campos extra o tipos inválidos.}
+        '429': {description: Límite de solicitudes excedido.}
+        '500': {description: Error interno de M4.}
+        '503': {description: Redis u otra dependencia de M4 no disponible.}
+components:
+  responses:
+    EstadoOperativoRegistrado:
+      description: Proyección operativa registrada por M4.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [conductor_id, connected, available, recibido_en]
+            properties:
+              conductor_id: {type: string, format: uuid}
+              event_id: {type: string, format: uuid}
+              connected: {type: boolean}
+              available: {type: boolean}
+              actualizado_en: {type: string, format: date-time}
+              recibido_en: {type: string, format: date-time}
+          example:
+            conductor_id: 0b8e5c1a-3f2d-4e6a-9b7c-5d4e3f2a1b0c
+            event_id: 6f1c2d4e-8a9b-4c3d-9e2f-1a2b3c4d5e6f
+            connected: true
+            available: true
+            actualizado_en: '2026-11-28T11:15:30.123456Z'
+            recibido_en: '2026-11-28T11:15:31.004211Z'
+  schemas:
+    Problema:
+      type: object
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        instance: {type: string}
+        code: {type: string}
+        trace_id: {type: string}

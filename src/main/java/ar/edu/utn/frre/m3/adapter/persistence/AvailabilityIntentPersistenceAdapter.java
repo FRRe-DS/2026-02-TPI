@@ -75,7 +75,7 @@ public class AvailabilityIntentPersistenceAdapter
         UUID commandId=UUID.randomUUID();
         String payload = buildM4Payload(intent, correlationId,commandId);
         String destination = m4BaseUrl +
-            "/api/v1/drivers/" + intent.getDriverId() + "/availability-intent";
+            "/api/v1/conductores/" + intent.getDriverId() + "/estado-operativo";
 
         OutboxJpaEntity entry = new OutboxJpaEntity(
                 commandId,
@@ -118,6 +118,8 @@ public class AvailabilityIntentPersistenceAdapter
                 "connected", intent.isConnected(),
                 "available", intent.isAvailable(),
                 "desiredVersion", intent.getDesiredVersion(),
+                // Instante de la intención: M4 lo recibe como timestamp_evento para descartar estados viejos.
+                "requestedAt", intent.getUpdatedAt().toString(),
                 "correlationId", correlationId != null ? correlationId : "");
         try {
             return objectMapper.writeValueAsString(body);

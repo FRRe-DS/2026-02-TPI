@@ -62,7 +62,9 @@ public class SecurityConfig {
         }
     }
     @Bean @Order(1)
-    public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
+    public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal,
+            @org.springframework.beans.factory.annotation.Value("${m3.security.service-read-roles:"+DriverAuthorizationFilter.DEFAULT_SERVICE_READ_ROLES+"}") String serviceReadRoles,
+            @org.springframework.beans.factory.annotation.Value("${m3.security.m5-offer-roles:"+DriverAuthorizationFilter.DEFAULT_M5_OFFER_ROLES+"}") String m5OfferRoles) throws Exception {
         JwtAuthenticationConverter converter=new JwtAuthenticationConverter();converter.setJwtGrantedAuthoritiesConverter(jwt->authorities(jwt.getClaims(),audience));
         // CSRF desactivado sólo en /api/**: la API es STATELESS y se autentica con Bearer JWT
         // (oauth2ResourceServer), sin cookies de sesión, así que no hay credencial que el navegador
@@ -71,12 +73,12 @@ public class SecurityConfig {
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a->{if(mode.enabled())a.anyRequest().permitAll();else a
                     .requestMatchers(HttpMethod.POST,"/api/v1/integration/m5/offers")
-                    .hasAuthority("SCOPE_m5:offers:write")
+                    .hasAnyAuthority(grantedAuthorities("SCOPE_m5:offers:write,"+m5OfferRoles))
                     .requestMatchers(HttpMethod.POST,"/api/v1/integration/m6/trips/completed")
                     .hasAuthority("SCOPE_m6:trip:completed:write").anyRequest().authenticated();})
             .oauth2ResourceServer(o->o.jwt(j->j.decoder(decoder).jwtAuthenticationConverter(converter)))
             .exceptionHandling(e->e.authenticationEntryPoint((r,s,x)->writeProblem(s,401)).accessDeniedHandler((r,s,x)->writeProblem(s,403)))
-            .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
+            .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode,serviceReadRoles,m5OfferRoles),AuthorizationFilter.class);
         return http.build();
     }
     @Bean @Order(2)
@@ -106,6 +108,12 @@ public class SecurityConfig {
             .addFilterBefore(demoAccess,AuthorizationFilter.class)
             .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
         return http.build();
+    }
+    /** "SCOPE_x" queda igual; un rol "solicitud-be" se convierte en la autoridad "ROLE_SOLICITUD-BE" que arma authorities(). */
+    static String[] grantedAuthorities(String csv) {
+        return DriverAuthorizationFilter.csv(csv).stream()
+                .map(a->a.startsWith("SCOPE_")?a:"ROLE_"+a.replaceFirst("^ROLE_","").toUpperCase(Locale.ROOT))
+                .toArray(String[]::new);
     }
     private void writeProblem(jakarta.servlet.http.HttpServletResponse response,int status) throws java.io.IOException {
         response.setStatus(status);response.setContentType("application/problem+json");

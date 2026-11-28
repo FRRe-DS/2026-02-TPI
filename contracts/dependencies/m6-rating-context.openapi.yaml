@@ -1,96 +1,113 @@
 openapi: 3.0.3
 info:
-  title: M6 — Contexto de Viajes para Valoración (Propuesta de Interfaz)
-  version: 0.2.0
-  description: Contrato consumido por M3; requiere acuerdo con M6.
+  title: M6 — Viajes (vista de M3 como consumidor)
+  version: 0.3.0
+  description: >-
+    Operaciones de M6 que usa o necesitaría M3 Grupo 02, según el contrato común de M6 (grupos 05 y 12):
+    FRRe-DS/2026-05-TPI contratos/openapi.yaml 1.0.0 (commit 33da65d) y FRRe-DS/2026-12-TPI openapi.yaml 2.0.0
+    (rama m6/base-de-datos, commit 8713da1). Ambos coinciden en estas operaciones salvo que 2.0.0 agrega 503.
+    La propuesta anterior GET /api/v1/trips/{tripId}/rating-context no existe en M6 y se reemplaza por
+    GET /api/v1/trips/{tripId}. Implementación en M3: ExternalModulesClient.findTrip y completedTrip.
+  x-fuente-proveedor:
+    - {repositorio: https://github.com/FRRe-DS/2026-05-TPI, archivo: contratos/openapi.yaml, version: 1.0.0, commit: 33da65d}
+    - {repositorio: https://github.com/FRRe-DS/2026-12-TPI, archivo: openapi.yaml, version: 2.0.0, commit: 8713da1}
+  x-eventos:
+    descripcion: >-
+      M6 no llama a M3 por HTTP. Publica TripCompleted y TripCancelled (sobre EventEnvelope, dedup por eventId).
+      Grupo 05 los publica en RabbitMQ, exchange movilidad.eventos (topic), routing keys trips.trip.completed y
+      trips.trip.cancelled, y lista a M3 como consumidor sugerido de TripCompleted. El contrato propone m6.events /
+      trip.completed y Grupo 12 hoy sólo los registra en memoria. Mientras no se acuerde el transporte, M3 consulta
+      GET /api/v1/trips/{tripId} cada 10 s para los viajes activos (TripStatusWorker).
+  x-acuerdos-pendientes:
+    - Las transiciones arrived, start, complete y cancel sólo admiten el rol DRIVER asignado (token del conductor), start exige el código QR del cliente (verificationToken) y M6 compara el sub del token con driverId. En M3 el driverId que llega a M6 (vía M5 y dispatch-info) es el UUID de M3, no el sub de M1; hay que acordar la identidad antes de que M3 pueda iniciar o finalizar viajes en nombre del conductor.
+    - Transporte de eventos (exchange y routing keys) para reemplazar la consulta periódica.
 paths:
-  /api/v1/trips/{tripId}/start:
-    post:
-      summary: Confirmar inicio del viaje
-      description: M3 llama cuando el conductor confirma que el pasajero está a bordo.
-      x-required-service-scopes: [m6:trip:lifecycle:write]
-      parameters:
-        - name: tripId
-          in: path
-          required: true
-          schema: {type: string, maxLength: 128}
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: {type: string, format: uuid}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [driverId]
-              properties:
-                driverId: {type: string, format: uuid}
-      responses:
-        '204': {description: Viaje iniciado.}
-        '404': {description: Viaje inexistente o no asignado al conductor.}
-        '409': {description: El estado actual no permite iniciar el viaje.}
-        '503': {description: M6 no disponible temporalmente.}
-  /api/v1/trips/{tripId}/complete:
-    post:
-      summary: Solicitar finalización del viaje
-      description: M6 conserva el ciclo de vida y notificará el destino final a M3 al completar el viaje.
-      x-required-service-scopes: [m6:trip:lifecycle:write]
-      parameters:
-        - name: tripId
-          in: path
-          required: true
-          schema: {type: string, maxLength: 128}
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: {type: string, format: uuid}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [driverId]
-              properties:
-                driverId: {type: string, format: uuid}
-      responses:
-        '204': {description: Solicitud de finalización aceptada.}
-        '404': {description: Viaje inexistente o no asignado al conductor.}
-        '409': {description: El estado actual no permite finalizar el viaje.}
-        '503': {description: M6 no disponible temporalmente.}
-  /api/v1/trips/{tripId}/rating-context:
+  /api/v1/trips/{tripId}:
     get:
-      summary: Consultar contexto de viaje completado para valoración de cliente
+      operationId: getTrip
+      summary: Consultar un viaje
+      description: >-
+        Roles CLIENT y DRIVER del viaje, OPERATOR y SYSTEM (SERVICIO/SERVICE). M3 lo usa con identidad de servicio para
+        (1) verificar que un viaje esté COMPLETED y sea del conductor antes de que valore al cliente (RF-3.7) y
+        (2) detectar fin o cancelación de los viajes activos y liberar al conductor.
+      x-interpretacion-m3:
+        'state COMPLETED': libera al conductor y lo reubica en closure.finalLatitude/finalLongitude (o el destino).
+        'state CANCELLED': libera al conductor; el viaje queda CANCELADO en M3.
+        'state IN_PROGRESS': el viaje figura en curso en M3.
+        '404': viaje desconocido; para valorar al cliente responde que M6 no reconoce el viaje.
+        '5xx o falla de red': no se inventan datos; se reintenta en la próxima pasada.
       parameters:
         - name: tripId
           in: path
           required: true
-          schema:
-            type: string
-        - name: driverId
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+          schema: {type: string}
       responses:
         '200':
-          description: Contexto obtenido del viaje, autorizado para el conductor solicitado.
+          description: Viaje.
           content:
             application/json:
               schema:
                 type: object
-                required: [tripId, driverId, clientId, status]
+                required: [id, clientId, driverId, state]
                 properties:
-                  tripId: {type: string, maxLength: 128}
+                  id: {type: string}
+                  clientId: {type: string, format: uuid}
                   driverId: {type: string, format: uuid}
-                  clientId: {type: string, maxLength: 128}
-                  status: {type: string, enum: [COMPLETED]}
-        '404':
-          description: Viaje inexistente o no asignado al conductor.
-        '422':
-          description: Viaje no completado.
-        '503':
-          description: Servicio temporalmente no disponible.
+                  state: {type: string, enum: [PENDING_ARRIVAL, DRIVER_ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED]}
+                  destinationLatitude: {type: number, format: double}
+                  destinationLongitude: {type: number, format: double}
+                  completedAt: {type: string, format: date-time, nullable: true}
+                  closure:
+                    type: object
+                    nullable: true
+                    properties:
+                      distanceKm: {type: number}
+                      durationSeconds: {type: integer}
+                      finalLatitude: {type: number, format: double}
+                      finalLongitude: {type: number, format: double}
+        '401': {description: Token ausente o vencido.}
+        '403': {description: Rol no permitido.}
+        '404': {description: Viaje inexistente.}
+        '503': {description: Dependencia no disponible.}
+  /api/v1/trips/{tripId}/start:
+    post:
+      operationId: startTrip
+      summary: Iniciar el viaje validando el código QR (pendiente de acuerdo)
+      description: >-
+        DRIVER_ARRIVED → IN_PROGRESS. Sólo el DRIVER asignado. M3 hoy envía {driverId} con token de servicio, que M6
+        rechaza; queda pendiente del acuerdo de identidad (x-acuerdos-pendientes).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verificationToken]
+              properties:
+                verificationToken: {type: string, minLength: 1, maxLength: 200}
+      responses:
+        '200': {description: Viaje actualizado.}
+        '403': {description: No es el conductor asignado.}
+        '409': {description: El estado no permite iniciar.}
+  /api/v1/trips/{tripId}/complete:
+    post:
+      operationId: completeTrip
+      summary: Finalizar el viaje (pendiente de acuerdo)
+      description: >-
+        IN_PROGRESS → COMPLETED. Sólo el DRIVER asignado. M3 hoy envía {driverId} con token de servicio, que M6
+        rechaza; queda pendiente del acuerdo de identidad.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [distanceKm]
+              properties:
+                distanceKm: {type: number, minimum: 0.1}
+                finalLatitude: {type: number, format: double}
+                finalLongitude: {type: number, format: double}
+      responses:
+        '200': {description: Viaje actualizado.}
+        '403': {description: No es el conductor asignado.}
+        '409': {description: El estado no permite finalizar.}

@@ -7,7 +7,7 @@
 openapi: 3.0.3
 info:
   title: M3 — Conductores y Vehículos
-  version: 0.2.1
+  version: 0.4.0
   description: >-
     PROPUESTA para revisión, no contrato aprobado ni implementación desplegada. Base: RF-3.1 a RF-3.7 del TPI 2026.
     Arquitectura Java/Spring Boot y PostgreSQL; web Thymeleaf prevista desde E1. El cambio de stack no modifica las
@@ -17,6 +17,12 @@ info:
     de uso deben aplicar permisos y propiedad. Roles y scopes se acuerdan con M1. Ningún token técnico representa a
     un conductor humano. Las operaciones E2 permanecen en el diseño; la release E1 publicará sólo las implementadas.
     API versionada /api/v1. Las respuestas de habilitación no constituyen reserva ni asignación.
+    0.3.0 agrega, con las mismas formas del contrato común M3 2.0.0 (igual en 3.0.0), las tres lecturas que M4
+    consume al validar candidatos: /api/v1/conductores/{id_conductor}/estado, /ubicacion y /vehiculos/{id_vehiculo}.
+    Sus errores son application/problem+json con los miembros adicionales codigo y mensaje del esquema Error común.
+    0.4.0 (T8): las operaciones de integración aceptan, además de su scope, los roles de servicio del realm compartido
+    (x-allowed-service-roles); el aviso HTTP de M6 queda marcado como no usado por M6, que comunica fin y cancelación con
+    eventos y es consultado por M3 en GET /api/v1/trips/{tripId}.
 servers:
   - url: 'http://localhost:3003'
     description: Ejemplo local; reemplazar en el entorno integrador. HTTPS al publicar.
@@ -28,6 +34,7 @@ tags:
   - name: Availability
   - name: Integration
   - name: Ratings
+  - name: Contrato común M3 2.0.0
   - name: Health
 security:
   - bearerAuth: []
@@ -545,6 +552,7 @@ paths:
       tags: [Integration]
       x-planned-delivery: E1
       x-required-service-scopes: ['m3:eligibility:read']
+      x-allowed-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be]
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
         - name: vehicleId
@@ -581,6 +589,7 @@ paths:
       tags: [Integration]
       x-planned-delivery: E1
       x-required-service-scopes: ['m3:eligibility:read']
+      x-allowed-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be]
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
       requestBody:
@@ -615,6 +624,7 @@ paths:
       tags: [Integration]
       x-planned-delivery: E1
       x-required-service-scopes: ['m3:eligibility:read']
+      x-allowed-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be]
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
       requestBody:
@@ -669,10 +679,14 @@ paths:
     post:
       operationId: receiveM5DriverOffer
       summary: Recibir una oferta de viaje ya despachada por M5
-      description: M5 conserva la búsqueda y asignación. M3 sólo presenta la oferta al conductor y recibe su respuesta.
+      description: >-
+        M5 conserva la búsqueda y asignación. M3 sólo presenta la oferta al conductor y recibe su respuesta.
+        Una llamada por oferta (no en lote), como la envía M5 Grupo 04 1.5.0 (OfertaM3). Un reenvío idéntico con el
+        mismo offerId responde 202 sin duplicarla; el mismo offerId con otros datos responde 400.
       tags: [Integration]
       x-planned-delivery: E2
       x-required-service-scopes: ['m5:offers:write']
+      x-allowed-service-roles: [SERVICIO, solicitud-be]
       requestBody:
         required: true
         content:
@@ -705,8 +719,11 @@ paths:
       description: >-
         M6 notifica el destino final del conductor. M3 reemplaza la posición simulada y publica esa ubicación a M4.
         Sólo acepta estado FINALIZADO; el identificador del conductor de M3 es UUID.
+        NO USADO POR M6: el contrato M6 1.0.0/2.0.0 (grupos 05 y 12) no llama a M3; publica TripCompleted y
+        TripCancelled y M3 consulta GET /api/v1/trips/{tripId} para liberar al conductor. Se conserva por compatibilidad.
       tags: [Integration]
       x-planned-delivery: E1
+      deprecated: true
       x-required-service-scopes: ['m6:trip:completed:write']
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
@@ -801,6 +818,83 @@ paths:
         '429': {$ref: '#/components/responses/Error429'}
         '503': {$ref: '#/components/responses/Error503'}
 
+  /api/v1/conductores/{id_conductor}/estado:
+    parameters:
+      - {$ref: '#/components/parameters/IdConductor'}
+    get:
+      operationId: obtenerEstadoConductor
+      summary: Estado operativo del conductor (contrato común M3 2.0.0)
+      description: >-
+        Lo consulta M4 al validar un candidato. DESCONECTADO sin intención o con connected=false; OCUPADO con un viaje
+        asignado o en curso; DISPONIBLE si pidió recibir viajes y en este momento tiene habilitación APROBADA, vehículo
+        activo APROBADA y licencia, seguro y cédula aprobados y vigentes; CONECTADO en los demás casos. No depende de
+        la confirmación de M4 (APPLIED): informa lo que M3 sabe del conductor.
+      tags: [Contrato común M3 2.0.0]
+      x-allowed-human-roles: [Conductor (propio), Operador, Administrador]
+      x-required-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be, 'SCOPE_m3:drivers:read']
+      responses:
+        '200':
+          description: Estado vigente.
+          headers:
+            ETag: {$ref: '#/components/headers/DriverETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EstadoConductor'}
+              example:
+                id_conductor: 0b8e5c1a-3f2d-4e6a-9b7c-5d4e3f2a1b0c
+                estado: DISPONIBLE
+                id_vehiculo_activo: 4697c312-9dc5-57e2-820f-ef7f84215e81
+                actualizado: '2026-11-28T11:15:30.123Z'
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/ErrorContrato'}
+        '404': {$ref: '#/components/responses/ErrorContrato'}
+
+  /api/v1/conductores/{id_conductor}/ubicacion:
+    parameters:
+      - {$ref: '#/components/parameters/IdConductor'}
+    get:
+      operationId: obtenerUbicacionConductor
+      summary: Última ubicación registrada (contrato común M3 2.0.0)
+      description: >-
+        Última posición conocida por M3 (simulador de ubicación). Sin ubicación todavía, responde 200 con latitud,
+        longitud y fecha_act_ubic en null: ubicación desconocida, nunca (0, 0). No aplica vencimiento.
+      tags: [Contrato común M3 2.0.0]
+      x-allowed-human-roles: [Conductor (propio), Operador, Administrador]
+      x-required-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be, 'SCOPE_m3:drivers:read']
+      responses:
+        '200':
+          description: Última ubicación o nulos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UbicacionConductor'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/ErrorContrato'}
+        '404': {$ref: '#/components/responses/ErrorContrato'}
+
+  /api/v1/conductores/{id_conductor}/vehiculos/{id_vehiculo}:
+    parameters:
+      - {$ref: '#/components/parameters/IdConductor'}
+      - {$ref: '#/components/parameters/IdVehiculo'}
+    get:
+      operationId: obtenerVehiculoContrato
+      summary: Vehículo del conductor (contrato común M3 2.0.0)
+      description: >-
+        M4 lo usa con id_vehiculo_activo para comprobar tipo y habilitación. tipos_serv se deriva de las categorías del
+        vehículo (DELIVERY → ENVIOS; STANDARD, PREMIUM y PETS → PASAJEROS) y habilitado refleja la habilitación del
+        vehículo. documentos trae la revisión actual de seguro (SEGURO) y cédula (CEDULA_VERDE).
+      tags: [Contrato común M3 2.0.0]
+      x-allowed-human-roles: [Conductor (propio), Operador, Administrador]
+      x-required-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be, 'SCOPE_m3:drivers:read']
+      responses:
+        '200':
+          description: Vehículo encontrado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/VehiculoContrato'}
+        '401': {$ref: '#/components/responses/Error401'}
+        '403': {$ref: '#/components/responses/ErrorContrato'}
+        '404': {$ref: '#/components/responses/ErrorContrato'}
+
   /health/live:
     get:
       operationId: checkLiveness
@@ -845,6 +939,16 @@ components:
         Access token emitido por el M1 acordado. Verificar firma/JWKS, issuer, audience, algoritmo, exp, nbf, tipo de
         principal y permisos; nunca sólo decodificar.
   parameters:
+    IdConductor:
+      name: id_conductor
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    IdVehiculo:
+      name: id_vehiculo
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     DriverId:
       name: driverId
       in: path
@@ -911,6 +1015,21 @@ components:
       schema: {type: integer, minimum: 1}
       description: Espera orientativa en segundos, cuando se pueda calcular.
   responses:
+    ErrorContrato:
+      description: Error del contrato común (403 ACCESO_PROHIBIDO, 404 NO_ENCONTRADO).
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [status, codigo, mensaje]
+            properties:
+              type: {type: string}
+              title: {type: string}
+              status: {type: integer}
+              detail: {type: string}
+              instance: {type: string}
+              codigo: {type: string, example: NO_ENCONTRADO}
+              mensaje: {type: string, example: El conductor indicado no existe.}
     Error400:
       description: Solicitud inválida o campos no permitidos.
       headers:
@@ -1495,3 +1614,53 @@ components:
         status: {type: string, enum: [ready, not_ready]}
       required: [status]
       description: Respuesta pública mínima. Detalle de dependencias sólo en diagnóstico protegido.
+
+    EstadoConductor:
+      type: object
+      required: [id_conductor, estado, actualizado]
+      properties:
+        id_conductor: {type: string, format: uuid}
+        estado: {type: string, enum: [DESCONECTADO, CONECTADO, DISPONIBLE, OCUPADO]}
+        id_vehiculo_activo: {type: string, format: uuid, nullable: true}
+        actualizado: {type: string, format: date-time, description: Último cambio de la intención (UTC).}
+    UbicacionConductor:
+      type: object
+      required: [id_conductor, latitud, longitud, fecha_act_ubic]
+      properties:
+        id_conductor: {type: string, format: uuid}
+        latitud: {type: number, format: double, nullable: true}
+        longitud: {type: number, format: double, nullable: true}
+        fecha_act_ubic: {type: string, format: date-time, nullable: true}
+    VehiculoContrato:
+      type: object
+      required: [id, id_conductor, tipo, patente, marca, modelo, anio, tipos_serv, documentos, habilitacion]
+      properties:
+        id: {type: string, format: uuid}
+        id_conductor: {type: string, format: uuid}
+        tipo: {type: string, enum: [AUTO, MOTO]}
+        patente: {type: string}
+        marca: {type: string}
+        modelo: {type: string}
+        anio: {type: integer}
+        tipos_serv:
+          type: array
+          items:
+            type: object
+            required: [tipo, habilitado]
+            properties:
+              tipo: {type: string, enum: [PASAJEROS, ENVIOS]}
+              habilitado: {type: boolean}
+        documentos:
+          type: array
+          items:
+            type: object
+            properties:
+              id_vehiculo: {type: string, format: uuid}
+              tipo: {type: string, enum: [SEGURO, CEDULA_VERDE]}
+              numero: {type: string}
+              entidad_emisora: {type: string, nullable: true}
+              fecha_emision: {type: string, format: date}
+              fecha_vencimiento: {type: string, format: date}
+              url_archivo: {type: string, nullable: true, description: null si la referencia guardada no es una URL http(s).}
+              estado: {type: string, enum: [VIGENTE, VENCIDO]}
+        habilitacion: {type: string, enum: [PENDIENTE, OBSERVADA, APROBADA, SUSPENDIDA, RECHAZADA]}

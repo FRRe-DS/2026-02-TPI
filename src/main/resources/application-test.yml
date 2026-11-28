@@ -33,6 +33,7 @@ logging:
 m3:
   integration:
     worker-enabled: false
+    m6-sync-enabled: false
 
 location-simulator:
   enabled: false

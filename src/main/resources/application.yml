@@ -103,7 +103,23 @@ m3:
     token-uri: ${OIDC_TECH_TOKEN_URI:}
     client-id: ${OIDC_TECH_CLIENT_ID:}
     client-secret: ${OIDC_TECH_CLIENT_SECRET:}
+    # Scope OAuth del token técnico para M4. Vacío: no se envía y M1 aplica los scopes por defecto del cliente.
+    # M4 Grupo 03 autoriza por rol (conductores-be del cliente grupo-02), no por scope.
+    m4-token-scope: ${M4_TOKEN_SCOPE:}
+    # M5 Grupo 04 exige este scope en el token de M3 para aceptar la respuesta del conductor.
+    m5-token-scope: ${M5_TOKEN_SCOPE:m5:offers:respond}
+    # M6 (grupos 05 y 12) autoriza por rol de servicio (SYSTEM/SERVICIO), no por scope.
+    m6-token-scope: ${M6_TOKEN_SCOPE:}
+    # Consulta periódica de viajes activos en M6 para detectar fin o cancelación.
+    m6-sync-enabled: ${M6_SYNC_ENABLED:true}
+    m6-sync-ms: ${M6_SYNC_MS:10000}
     worker-enabled: ${M4_WORKER_ENABLED:true}
+  security:
+    # Roles o scopes que cuentan como el rol "servicio" del contrato M3 2.0.0 para leer
+    # /api/v1/conductores/{id}/estado, /ubicacion y /vehiculos/{id}. Coma como separador.
+    service-read-roles: ${M3_SERVICE_READ_ROLES:SERVICIO,SCOPE_m3:drivers:read,ubicacion-be,solicitud-be,viajes-be}
+    # Roles con los que M5 puede entregar ofertas en POST /api/v1/integration/m5/offers (además de SCOPE_m5:offers:write).
+    m5-offer-roles: ${M3_M5_OFFER_ROLES:SERVICIO,solicitud-be}
 
 location-simulator:
   enabled: ${LOCATION_SIMULATOR_ENABLED:true}

@@ -594,8 +594,9 @@ Compartir IDs, nombre visible cuando corresponda, vehículo/servicio, elegibilid
 | **INT-01** | M3/usuarios ↔ M1             | OIDC/JWT, clientes, claves, audiencias/permisos.                | E1                    |
 | **INT-02** | M4/M5 → M3                   | GET elegibilidad individual, `vehicleId`/`serviceType`.         | E1                    |
 | **INT-03** | M4/M5 → M3                   | POST elegibilidad batch, 1–100 candidatos.                      | E1                    |
+| **INT-03b** | M4 → M3                     | `GET /api/v1/conductores/{id_conductor}/estado`, `/ubicacion` y `/vehiculos/{id_vehiculo}` (contrato común M3 2.0.0). | Integración M4 G03 |
 | **INT-04** | M6 → M3                      | GET resumen mínimo de conductor.                                | Proveedor M3 en E1    |
-| **INT-05** | M3 → M4                      | `PUT /api/v1/drivers/{driverId}/availability-intent`.           | Primer intercambio E1 |
+| **INT-05** | M3 → M4                      | `PUT /api/v1/conductores/{conductor_id}/estado-operativo` (contrato M4 Grupo 03 1.0.0). | Primer intercambio E1 |
 | **INT-06** | M3 → M6                      | `GET /api/v1/trips/{tripId}/rating-context`, filtro `driverId`. | Real en E2            |
 | **INT-07** | M3 → RabbitMQ → consumidores | Catálogo del apartado 10.2.                                     | E2                    |
 

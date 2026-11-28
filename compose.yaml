@@ -42,7 +42,14 @@ services:
       OIDC_WEB_CLIENT_SECRET: ${OIDC_WEB_CLIENT_SECRET:-}
       SPRING_PROFILES_ACTIVE: docker
       M4_BASE_URL: ${M4_BASE_URL:-http://localhost:4004}
+      M4_TOKEN_SCOPE: ${M4_TOKEN_SCOPE:-}
+      M3_SERVICE_READ_ROLES: ${M3_SERVICE_READ_ROLES:-SERVICIO,SCOPE_m3:drivers:read,ubicacion-be,solicitud-be,viajes-be}
       M6_BASE_URL: ${M6_BASE_URL:-http://localhost:6006}
+      M5_BASE_URL: ${M5_BASE_URL:-http://localhost:5005}
+      M5_TOKEN_SCOPE: ${M5_TOKEN_SCOPE:-m5:offers:respond}
+      M3_M5_OFFER_ROLES: ${M3_M5_OFFER_ROLES:-SERVICIO,solicitud-be}
+      M6_TOKEN_SCOPE: ${M6_TOKEN_SCOPE:-}
+      M6_SYNC_ENABLED: ${M6_SYNC_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy

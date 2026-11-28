@@ -13,5 +13,13 @@ public record DriverTrip(String tripId, DriverOffer offer, TripStatus status,
         return new DriverTrip(tripId, offer, TripStatus.FINALIZADO, startedAt, completedAt, destination, driverRating);
     }
 
-    public enum TripStatus { ASSIGNED, IN_PROGRESS, FINALIZADO }
+    public DriverTrip cancelled(OffsetDateTime cancelledAt) {
+        return new DriverTrip(tripId, offer, TripStatus.CANCELADO, startedAt, cancelledAt, destination, driverRating);
+    }
+
+    public boolean isActive() {
+        return status == TripStatus.ASSIGNED || status == TripStatus.IN_PROGRESS;
+    }
+
+    public enum TripStatus { ASSIGNED, IN_PROGRESS, FINALIZADO, CANCELADO }
 }
