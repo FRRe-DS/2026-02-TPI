@@ -39,7 +39,8 @@ public class SecurityConfig {
         }
         NimbusJwtDecoder decoder=NimbusJwtDecoder.withJwkSetUri(jwks).build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(issuer),jwt->{
-            boolean valid=jwt.getAudience().contains(audience) && jwt.getSubject()!=null && !jwt.getSubject().isBlank()
+            // Sin claim "aud", getAudience() es null: se rechaza con 401 en vez de romper con 500.
+            boolean valid=jwt.getAudience()!=null && jwt.getAudience().contains(audience) && jwt.getSubject()!=null && !jwt.getSubject().isBlank()
                     && jwt.getExpiresAt()!=null && !"ID".equalsIgnoreCase(jwt.getClaimAsString("typ"));
             return valid?OAuth2TokenValidatorResult.success():OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token","Audiencia o tipo de token inválido",null));
         }));return decoder;

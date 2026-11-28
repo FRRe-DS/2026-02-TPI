@@ -66,6 +66,14 @@ class ProductionSecurityTest {
             mvc.perform(get(path).header("Authorization","Bearer "+invalid)).andExpect(status().isUnauthorized());
         mvc.perform(get(path).header("Authorization","Bearer "+token("stranger","DRIVER")).header("X-Dev-Subject","owner").header("X-Dev-Roles","ADMIN")).andExpect(status().isForbidden());
     }
+    @Test void tokenWithoutAudienceIsUnauthorizedNotServerError() throws Exception {
+        var claims=new JWTClaimsSet.Builder().issuer(ISSUER).subject("owner").issueTime(Date.from(Instant.now()))
+            .expirationTime(Date.from(Instant.now().plusSeconds(300))).claim("scope","").claim("typ","Bearer")
+            .claim("realm_access",Map.of("roles",List.of("DRIVER"))).build();
+        var jwt=new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(KEY.getKeyID()).build(),claims);jwt.sign(new RSASSASigner(KEY));
+        mvc.perform(get(path).header("Authorization","Bearer "+jwt.serialize()))
+            .andExpect(status().isUnauthorized());
+    }
     @Test void technicalScopesAndHumanRolesAreSeparated() throws Exception {
         String technical=token("m4","m3-service","m3:eligibility:read","",Instant.now().plusSeconds(300),KEY);
         mvc.perform(get("/api/v1/integration/drivers/"+driver+"/eligibility").header("Authorization","Bearer "+technical)).andExpect(status().isOk());
