@@ -7,7 +7,15 @@ import ar.edu.utn.frre.m3.application.location.LocationUpdate;
 import ar.edu.utn.frre.m3.application.trip.DriverOffer;
 import ar.edu.utn.frre.m3.application.trip.OfferDecisionReceipt;
 import ar.edu.utn.frre.m3.domain.exception.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -17,37 +25,101 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 @Component
 public class ExternalModulesClient implements M4AvailabilityPort, M4LocationPort, M5OfferPort,
         M6TripLifecyclePort, TripContextPort {
+    /** Código de problema con el que M4 (Grupo 03) informa que ese event_id ya es su estado vigente. */
+    static final String M4_DUPLICATE_EVENT_CODE = "CONFLICTO_EVENTO_ID";
+    private static final ObjectMapper JSON = new ObjectMapper();
     private final RestClient client; private final ServiceTokenProvider tokens; private final String m4,m5,m6;
+    private final String m4TokenScope;
     @org.springframework.beans.factory.annotation.Autowired
     public ExternalModulesClient(ServiceTokenProvider tokens,@Value("${m3.integration.m4-base-url:http://localhost:4004}") String m4,
             @Value("${m3.integration.m5-base-url:http://localhost:5005}") String m5,
-            @Value("${m3.integration.m6-base-url:http://localhost:6006}") String m6) {
-        this.tokens=tokens;this.m4=m4;this.m5=m5;this.m6=m6;
+            @Value("${m3.integration.m6-base-url:http://localhost:6006}") String m6,
+            @Value("${m3.integration.m4-token-scope:}") String m4TokenScope) {
+        this.tokens=tokens;this.m4=m4;this.m5=m5;this.m6=m6;this.m4TokenScope=m4TokenScope;
         var factory=new JdkClientHttpRequestFactory(java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build());
         factory.setReadTimeout(Duration.ofSeconds(5));client=RestClient.builder().requestFactory(factory).build();
+    }
+    public ExternalModulesClient(ServiceTokenProvider tokens, String m4, String m5, String m6) {
+        this(tokens, m4, m5, m6, "");
     }
     public ExternalModulesClient(ServiceTokenProvider tokens, String m4, String m6) {
         this(tokens, m4, "http://localhost:5005", m6);
     }
+
+    /**
+     * Entrega a M4 una intención de disponibilidad guardada en el outbox de M3.
+     *
+     * <p>Contrato: M4 Grupo 03 v1.0.0, {@code PUT /api/v1/conductores/{conductor_id}/estado-operativo}.
+     * El cuerpo sólo lleva los campos que M4 acepta ({@code additionalProperties: false}):
+     * {@code event_id} (id estable del comando, igual en cada reintento), {@code connected},
+     * {@code available} y {@code timestamp_evento} (para que M4 descarte un estado más viejo).
+     *
+     * <p>Clasificación de la respuesta:
+     * <ul>
+     *   <li>200/201 con el mismo connected/available enviado → {@code APPLIED}.</li>
+     *   <li>409 {@code CONFLICTO_EVENTO_ID} → {@code APPLIED}: M4 ya tiene ese mismo evento como vigente
+     *       (por ejemplo, M3 no recibió la primera respuesta y reintentó).</li>
+     *   <li>401, 429, 5xx o falla de red → {@code RETRY}.</li>
+     *   <li>Otro 4xx (400, 403, 404, 409 por timestamp, 422) → {@code REJECTED}.</li>
+     * </ul>
+     */
     public DeliveryResult send(AvailabilityMessage m) {
+        M4OperationalState state; String requestId;
         try {
-            String token=tokens.token("m4:availability:write");
-            var response=client.put().uri(m4+"/api/v1/drivers/{driverId}/availability-intent",m.driverId())
-                .headers(h->{if(token!=null)h.setBearerAuth(token);h.set("Idempotency-Key",m.id().toString());})
-                .contentType(MediaType.APPLICATION_JSON).body(m.payload()).retrieve().toEntity(Acknowledgement.class);
-            var ack=response.getBody();
-            return response.getStatusCode().value()==200 && ack!=null && ack.appliedVersion()==m.version() ? DeliveryResult.APPLIED : DeliveryResult.RETRY;
+            JsonNode payload=JSON.readTree(m.payload());
+            state=toM4OperationalState(m.id(),payload);
+            requestId=payload.path("correlationId").asText("");
+        } catch(JsonProcessingException|RuntimeException malformed) {
+            return DeliveryResult.REJECTED; // Un payload ilegible no mejora reintentando.
+        }
+        try {
+            String token=tokens.token(m4TokenScope);
+            var response=client.put().uri(m4+"/api/v1/conductores/{conductorId}/estado-operativo",m.driverId())
+                .headers(h->{if(token!=null)h.setBearerAuth(token);if(!requestId.isBlank())h.set("X-Request-Id",requestId);})
+                .contentType(MediaType.APPLICATION_JSON).body(state).retrieve().toEntity(M4OperationalStateAck.class);
+            return isConfirmation(response.getStatusCode().value(),response.getBody(),m,state) ? DeliveryResult.APPLIED : DeliveryResult.RETRY;
         } catch(RestClientResponseException ex) {
-            int status=ex.getStatusCode().value();return status==429 || status>=500 || status==401 ? DeliveryResult.RETRY : DeliveryResult.REJECTED;
+            int status=ex.getStatusCode().value();
+            if(status==409 && M4_DUPLICATE_EVENT_CODE.equals(problemCode(ex))) return DeliveryResult.APPLIED;
+            return status==429 || status>=500 || status==401 ? DeliveryResult.RETRY : DeliveryResult.REJECTED;
         } catch(RuntimeException ex) { return DeliveryResult.RETRY; }
     }
+
+    /** Traduce el payload interno del outbox (m3.availability-intent.v1) al cuerpo que acepta M4. */
+    static M4OperationalState toM4OperationalState(UUID eventId,JsonNode payload) {
+        if(payload==null || !payload.path("connected").isBoolean() || !payload.path("available").isBoolean())
+            throw new IllegalArgumentException("El payload del outbox no tiene connected/available.");
+        // Los mensajes encolados antes de este cambio no tienen requestedAt: se envían sin timestamp_evento.
+        String requestedAt=payload.path("requestedAt").isTextual()
+            ? Instant.parse(payload.get("requestedAt").asText()).truncatedTo(ChronoUnit.MICROS).toString() : null;
+        return new M4OperationalState(eventId,payload.get("connected").asBoolean(),payload.get("available").asBoolean(),requestedAt);
+    }
+
+    private static boolean isConfirmation(int status,M4OperationalStateAck ack,AvailabilityMessage m,M4OperationalState sent) {
+        if((status!=200 && status!=201) || ack==null) return false;
+        if(ack.conductorId()!=null && !ack.conductorId().equals(m.driverId())) return false;
+        return ack.connected()==sent.connected() && ack.available()==sent.available();
+    }
+
+    private static String problemCode(RestClientResponseException ex) {
+        try { return JSON.readTree(ex.getResponseBodyAsString()).path("code").asText(null); }
+        catch(JsonProcessingException|RuntimeException parseError) { return null; }
+    }
+    /**
+     * Envía la posición del conductor a M4 Grupo 03 v1.0.0:
+     * {@code PUT /api/v1/conductores/{conductor_id}/ubicacion} con {@code {latitud, longitud, timestamp_ubicacion}}
+     * ({@code additionalProperties: false}). La conexión y disponibilidad viajan por {@link #send}, no aquí.
+     * M4 responde 201 la primera vez y 200 después; 409 si el timestamp es anterior al vigente.
+     */
     @Override
     public void sendLocation(LocationUpdate update) {
         try {
-            String token=tokens.token("m4:location:write");
-            client.put().uri(m4+"/api/v1/drivers/{driverId}/location",update.driverId())
+            String token=tokens.token(m4TokenScope);
+            var body=new M4Location(update.latitude(),update.longitude(),
+                update.recordedAt().toInstant().truncatedTo(ChronoUnit.MICROS).toString());
+            client.put().uri(m4+"/api/v1/conductores/{conductorId}/ubicacion",update.driverId())
                 .headers(h->{if(token!=null)h.setBearerAuth(token);})
-                .contentType(MediaType.APPLICATION_JSON).body(update).retrieve().toBodilessEntity();
+                .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().toBodilessEntity();
         } catch (RestClientException ex) {
             throw new IntegrationUnavailableException("M4 no está disponible para recibir la ubicación.");
         }
@@ -96,7 +168,15 @@ public class ExternalModulesClient implements M4AvailabilityPort, M4LocationPort
             throw new IntegrationUnavailableException("M6 no está disponible para verificar el viaje. Intentá nuevamente.");
         } catch(RestClientException ex) { throw new IntegrationUnavailableException("No se pudo conectar con M6 para verificar el viaje."); }
     }
-    public record Acknowledgement(long appliedVersion) {}
+    /** Cuerpo de {@code EstadoOperativo} en el contrato de M4 Grupo 03 (snake_case, sin campos extra). */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record M4OperationalState(@JsonProperty("event_id") UUID eventId, boolean connected, boolean available,
+            @JsonProperty("timestamp_evento") String timestampEvento) {}
+    /** Cuerpo de {@code ActualizarUbicacion} en el contrato de M4 Grupo 03. */
+    public record M4Location(double latitud, double longitud, @JsonProperty("timestamp_ubicacion") String timestampUbicacion) {}
+    /** Parte de {@code EstadoOperativoRegistrado} que M3 usa para confirmar la entrega. */
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record M4OperationalStateAck(@JsonProperty("conductor_id") UUID conductorId, boolean connected, boolean available) {}
     public record M5Decision(UUID driverId, String decision) {}
     public record M6TripAction(UUID driverId) {}
 }

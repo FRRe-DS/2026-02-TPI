@@ -120,6 +120,11 @@ public class LocationSimulationService {
         return positions.get(driverId);
     }
 
+    /** True mientras el conductor tiene un viaje asignado o en curso (estado en memoria, se pierde al reiniciar). */
+    public boolean isOccupied(UUID driverId) {
+        return occupiedDrivers.contains(driverId);
+    }
+
     /** Publishes busy state with location without changing the driver's persisted availability intent. */
     public void setOccupied(UUID driverId, boolean occupied) {
         if (occupied) occupiedDrivers.add(driverId);

@@ -62,7 +62,8 @@ public class SecurityConfig {
         }
     }
     @Bean @Order(1)
-    public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal) throws Exception {
+    public SecurityFilterChain api(HttpSecurity http,DevelopmentMode mode,JwtDecoder decoder,DriverAccessService access,CurrentPrincipalPort principal,
+            @org.springframework.beans.factory.annotation.Value("${m3.security.service-read-roles:"+DriverAuthorizationFilter.DEFAULT_SERVICE_READ_ROLES+"}") String serviceReadRoles) throws Exception {
         JwtAuthenticationConverter converter=new JwtAuthenticationConverter();converter.setJwtGrantedAuthoritiesConverter(jwt->authorities(jwt.getClaims(),audience));
         http.securityMatcher("/api/**").csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -73,7 +74,7 @@ public class SecurityConfig {
                     .hasAuthority("SCOPE_m6:trip:completed:write").anyRequest().authenticated();})
             .oauth2ResourceServer(o->o.jwt(j->j.decoder(decoder).jwtAuthenticationConverter(converter)))
             .exceptionHandling(e->e.authenticationEntryPoint((r,s,x)->writeProblem(s,401)).accessDeniedHandler((r,s,x)->writeProblem(s,403)))
-            .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode),AuthorizationFilter.class);
+            .addFilterAfter(new DriverAuthorizationFilter(access,principal,mode,serviceReadRoles),AuthorizationFilter.class);
         return http.build();
     }
     @Bean @Order(2)
