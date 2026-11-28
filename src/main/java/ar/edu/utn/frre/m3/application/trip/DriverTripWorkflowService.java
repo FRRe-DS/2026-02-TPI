@@ -65,7 +65,7 @@ public class DriverTripWorkflowService {
             throw new DomainValidationException("La oferta de M5 ya venció.");
         }
         DriverTrip active = trips.get(incoming.driverId());
-        if (active != null && active.status() != DriverTrip.TripStatus.FINALIZADO) {
+        if (active != null && active.isActive()) {
             throw new DomainValidationException("El conductor ya tiene un viaje asignado.");
         }
         DriverOffer raced = offers.putIfAbsent(incoming.offerId(), incoming);
@@ -99,11 +99,19 @@ public class DriverTripWorkflowService {
                 throw new DomainValidationException("Conectate y activá la disponibilidad antes de aceptar el pedido.");
             }
             DriverTrip active = trips.get(driverId);
-            if (active != null && active.status() != DriverTrip.TripStatus.FINALIZADO) {
+            if (active != null && active.isActive()) {
                 throw new DomainValidationException("El conductor ya tiene un viaje en curso.");
             }
         }
-        OfferDecisionReceipt receipt = m5.respondToOffer(offerId, driverId, decision);
+        OfferDecisionReceipt receipt;
+        try {
+            receipt = m5.respondToOffer(offerId, driverId, decision);
+        } catch (OfferUnavailableException closed) {
+            // M5 ya no la acepta (otra respuesta ganó, venció o se canceló): deja de mostrarse como pendiente.
+            offers.put(offerId, offer.withDecision(DriverOffer.OfferStatus.EXPIRED, null));
+            log.info("[TRIP] driver={} offer={} closed by M5: {}", driverId, offerId, closed.getMessage());
+            throw closed;
+        }
         if (receipt == null || !decision.equals(receipt.status())) {
             throw new IntegrationUnavailableException("M5 no confirmó la respuesta a la oferta.");
         }
@@ -175,6 +183,71 @@ public class DriverTripWorkflowService {
             log.info("[TRIP] driver={} trip={} finalized by M6", driverId, tripId);
             return completed;
         });
+    }
+
+    /**
+     * Alinea los viajes activos de M3 con el estado que tiene M6 (dueño del ciclo de vida).
+     *
+     * <p>M6 no le avisa a M3 por HTTP: publica {@code TripCompleted}/{@code TripCancelled} como eventos y
+     * permite que un servicio lea {@code GET /api/v1/trips/{tripId}}. Mientras no haya un acuerdo de
+     * mensajería, M3 consulta periódicamente cada viaje activo. Si M6 lo completó o lo canceló, libera
+     * al conductor (deja de estar OCUPADO) y, si M6 informa el punto final, lo reubica allí.
+     * Las llamadas a M6 se hacen fuera del bloqueo; el cambio se aplica sólo si el viaje sigue igual.
+     *
+     * @return cantidad de viajes que cambiaron de estado en esta pasada
+     */
+    public int syncWithM6() {
+        List<DriverTrip> active = trips.values().stream().filter(DriverTrip::isActive).toList();
+        int changed = 0;
+        for (DriverTrip trip : active) {
+            UUID driverId = trip.offer().driverId();
+            M6TripState remote;
+            try {
+                remote = m6.findTrip(trip.tripId()).orElse(null);
+            } catch (IntegrationUnavailableException unavailable) {
+                log.warn("[TRIP] M6 no disponible al sincronizar trip={}: se reintenta en la próxima pasada", trip.tripId());
+                continue;
+            }
+            if (remote == null) continue;
+            if (remote.driverId() != null && !remote.driverId().equals(driverId)) {
+                log.warn("[TRIP] M6 asigna trip={} a otro conductor; no se modifica", trip.tripId());
+                continue;
+            }
+            if (applyRemoteState(driverId, trip, remote)) changed++;
+        }
+        return changed;
+    }
+
+    private synchronized boolean applyRemoteState(UUID driverId, DriverTrip seen, M6TripState remote) {
+        if (trips.get(driverId) != seen) return false; // otro cambio ganó mientras se consultaba a M6
+        if (remote.isCompleted()) {
+            GeoPosition end = remote.finalLatitude() != null && remote.finalLongitude() != null
+                    ? new GeoPosition(remote.finalLatitude(), remote.finalLongitude())
+                    : remote.destinationLatitude() != null && remote.destinationLongitude() != null
+                        ? new GeoPosition(remote.destinationLatitude(), remote.destinationLongitude()) : null;
+            trips.put(driverId, seen.completed(remote.completedAt() == null ? now() : remote.completedAt(), end, null));
+            locations.setOccupied(driverId, false);
+            if (end != null) {
+                try {
+                    locations.setCompletedTripDestination(driverId, "FINALIZADO", end);
+                } catch (RuntimeException positionNotPublished) {
+                    log.warn("[TRIP] driver={} liberado, pero no se pudo publicar el punto final: {}", driverId, positionNotPublished.getMessage());
+                }
+            }
+            log.info("[TRIP] driver={} trip={} completed in M6", driverId, seen.tripId());
+            return true;
+        }
+        if (remote.isCancelled()) {
+            locations.setOccupied(driverId, false);
+            trips.put(driverId, seen.cancelled(now()));
+            log.info("[TRIP] driver={} trip={} cancelled in M6", driverId, seen.tripId());
+            return true;
+        }
+        if (remote.isInProgress() && seen.status() == DriverTrip.TripStatus.ASSIGNED) {
+            trips.put(driverId, seen.withStatus(DriverTrip.TripStatus.IN_PROGRESS, now()));
+            return true;
+        }
+        return false;
     }
 
     public DriverTrip currentTrip(UUID driverId) {

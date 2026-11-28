@@ -14,16 +14,24 @@ import java.util.stream.Collectors;
 import org.springframework.web.filter.OncePerRequestFilter;
 public class DriverAuthorizationFilter extends OncePerRequestFilter {
     private final DriverAccessService access; private final CurrentPrincipalPort principal; private final DevelopmentMode mode;
-    private final Set<String> serviceReadRoles;
+    private final Set<String> serviceReadRoles, m5OfferRoles;
     private static final Pattern DRIVER=Pattern.compile("^/(?:api/v1|ui)/(?:operator/)?drivers/([0-9a-fA-F-]{36})(?:/.*)?$");
     /** Lecturas del contrato M3 2.0.0 que hace M4: estado, ubicación y vehículo de un conductor. */
     private static final Pattern CONTRACT_READ=Pattern.compile("^/api/v1/conductores/([0-9a-fA-F-]{36})/(?:estado|ubicacion|vehiculos/[0-9a-fA-F-]{36})$");
     /** Rol "servicio" del contrato y sus equivalentes en el realm compartido (M4, M5, M6). */
     public static final String DEFAULT_SERVICE_READ_ROLES="SERVICIO,SCOPE_m3:drivers:read,ubicacion-be,solicitud-be,viajes-be";
+    /** Roles de servicio con los que M5 puede entregar ofertas (además del scope m5:offers:write). */
+    public static final String DEFAULT_M5_OFFER_ROLES="SERVICIO,solicitud-be";
     public DriverAuthorizationFilter(DriverAccessService access,CurrentPrincipalPort principal,DevelopmentMode mode) { this(access,principal,mode,DEFAULT_SERVICE_READ_ROLES); }
     public DriverAuthorizationFilter(DriverAccessService access,CurrentPrincipalPort principal,DevelopmentMode mode,String serviceReadRoles) {
+        this(access,principal,mode,serviceReadRoles,DEFAULT_M5_OFFER_ROLES);
+    }
+    public DriverAuthorizationFilter(DriverAccessService access,CurrentPrincipalPort principal,DevelopmentMode mode,String serviceReadRoles,String m5OfferRoles) {
         this.access=access;this.principal=principal;this.mode=mode;
-        this.serviceReadRoles=Arrays.stream(serviceReadRoles==null?new String[0]:serviceReadRoles.split(",")).map(String::trim).filter(r->!r.isEmpty()).collect(Collectors.toUnmodifiableSet());
+        this.serviceReadRoles=csv(serviceReadRoles);this.m5OfferRoles=csv(m5OfferRoles);
+    }
+    static Set<String> csv(String value) {
+        return Arrays.stream(value==null?new String[0]:value.split(",")).map(String::trim).filter(r->!r.isEmpty()).collect(Collectors.toUnmodifiableSet());
     }
     protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain) throws ServletException,IOException {
         String path=request.getRequestURI(); request.setAttribute("m3.development",mode.enabled());
@@ -37,7 +45,11 @@ public class DriverAuthorizationFilter extends OncePerRequestFilter {
                 else if(path.endsWith("/m5/offers")) scope="SCOPE_m5:offers:write";
                 else if(path.endsWith("/summary")) scope="SCOPE_m3:drivers:read";
                 else scope="SCOPE_m3:eligibility:read";
-                if(!principal.hasRole(scope) && !access.operator()) throw new DriverAccessDeniedException("Scope de integración insuficiente.");
+                // Además del scope propio, se aceptan los roles de servicio del realm compartido (T8):
+                // M5 entrega ofertas con SERVICIO/solicitud-be y consulta dispatch-info con su identidad de servicio.
+                boolean serviceRole=path.endsWith("/m5/offers") ? m5OfferRoles.stream().anyMatch(principal::hasRole)
+                        : !path.endsWith("/m6/trips/completed") && serviceReadRoles.stream().anyMatch(principal::hasRole);
+                if(!principal.hasRole(scope) && !serviceRole && !access.operator()) throw new DriverAccessDeniedException("Scope de integración insuficiente.");
             } else if(CONTRACT_READ.matcher(path).matches() && "GET".equals(request.getMethod()) && serviceReadRoles.stream().anyMatch(principal::hasRole)) {
                 // Identidad de servicio (M4/M5/M6): puede leer el estado de cualquier conductor; el 404 lo decide el controlador.
             } else {

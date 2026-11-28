@@ -114,10 +114,43 @@ class ExternalModulesClientTest {
     }
     static Set<String> toSet(Iterator<String> names) { var set=new HashSet<String>();names.forEachRemaining(set::add);return set; }
 
-    @Test void readsTripContextAndDoesNotInventDataDuringOutage() {
-        UUID driver=UUID.randomUUID();body.set("{\"tripId\":\"t1\",\"driverId\":\""+driver+"\",\"clientId\":\"c1\",\"status\":\"COMPLETED\"}");
-        assertEquals(driver,client.completedTrip("t1",driver).driverId());
-        code.set(503);assertThrows(IntegrationUnavailableException.class,()->client.completedTrip("t1",driver));
+    // ── T8 · M6 (grupos 05 y 12): GET /api/v1/trips/{tripId} con identidad de servicio ──
+
+    static String m6Trip(UUID driver,String state,String closure) {
+        return "{\"id\":\"trip-42\",\"requestId\":\"r1\",\"reservationId\":null,\"clientId\":\"c1\",\"driverId\":\""+driver
+            +"\",\"vehicleId\":\"v1\",\"vehicleType\":\"AUTO\",\"originLatitude\":-27.45,\"originLongitude\":-58.98,"
+            +"\"destinationLatitude\":-27.4698,\"destinationLongitude\":-58.8306,\"state\":\""+state+"\",\"version\":4,"
+            +"\"createdAt\":\"2026-11-28T11:00:00Z\",\"completedAt\":"+(state.equals("COMPLETED")?"\"2026-11-28T11:30:00Z\"":"null")
+            +",\"closure\":"+closure+"}";
+    }
+    @Test void verifiesCompletedTripForTheDriverWithM6TripResource() {
+        UUID driver=UUID.randomUUID();
+        body.set(m6Trip(driver,"COMPLETED","{\"distanceKm\":6.4,\"durationSeconds\":900,\"finalLatitude\":-27.47,\"finalLongitude\":-58.83}"));
+        var context=client.completedTrip("trip-42",driver);
+        assertEquals("GET",method.get());
+        assertEquals("/api/v1/trips/trip-42",path.get());
+        assertEquals("c1",context.clientId());
+        assertEquals("COMPLETED",context.status());
+        var state=client.findTrip("trip-42").orElseThrow();
+        assertEquals(-27.47,state.finalLatitude());
+        assertEquals(java.time.OffsetDateTime.parse("2026-11-28T11:30:00Z"),state.completedAt());
+    }
+    @Test void doesNotLetTheDriverRateAnUnfinishedForeignOrUnknownTrip() {
+        UUID driver=UUID.randomUUID();
+        body.set(m6Trip(driver,"IN_PROGRESS","null"));
+        assertThrows(ar.edu.utn.frre.m3.domain.exception.DomainValidationException.class,()->client.completedTrip("trip-42",driver));
+        body.set(m6Trip(UUID.randomUUID(),"COMPLETED","null"));
+        assertThrows(ar.edu.utn.frre.m3.domain.exception.DomainValidationException.class,()->client.completedTrip("trip-42",driver));
+        m4Problem(404,"TRIP_NOT_FOUND");
+        assertThrows(ar.edu.utn.frre.m3.domain.exception.DomainValidationException.class,()->client.completedTrip("trip-42",driver));
+        assertTrue(client.findTrip("trip-42").isEmpty());
+    }
+    @Test void doesNotInventTripDataDuringAnM6Outage() {
+        m4Problem(503,"DEPENDENCY_UNAVAILABLE");
+        assertThrows(IntegrationUnavailableException.class,()->client.findTrip("trip-42"));
+        assertThrows(IntegrationUnavailableException.class,()->client.completedTrip("trip-42",UUID.randomUUID()));
+        server.stop(0);
+        assertThrows(IntegrationUnavailableException.class,()->client.findTrip("trip-42"));
     }
     @Test void sendsLocationToTheAgreedM4ResourceWithTechnicalToken() throws Exception {
         UUID driver=UUID.randomUUID();
@@ -146,6 +179,27 @@ class ExternalModulesClientTest {
         assertNotNull(keys.getLast());
         assertTrue(requestBody.get().contains("\"driverId\":\""+driver+"\""));
         assertTrue(requestBody.get().contains("\"decision\":\"ACCEPTED\""));
+    }
+    @Test void m5ClosedOffersAreNotReportedAsAnOutage() {
+        UUID offer=UUID.randomUUID(),driver=UUID.randomUUID();
+        for(int status:new int[]{404,409,410}) {
+            m4Problem(status,"X");
+            assertThrows(ar.edu.utn.frre.m3.application.trip.OfferUnavailableException.class,()->client.respondToOffer(offer,driver,"ACCEPTED"),"HTTP "+status);
+        }
+        m4Problem(503,"X");
+        assertThrows(IntegrationUnavailableException.class,()->client.respondToOffer(offer,driver,"ACCEPTED"));
+        assertEquals(1,keys.stream().distinct().count(),"la misma Idempotency-Key en cada reintento");
+    }
+    @Test void requestsTheScopeM5RequiresAndNoScopeForM6ByDefault() {
+        var tokens=mock(ServiceTokenProvider.class);when(tokens.token(anyString())).thenReturn("t");
+        String base="http://127.0.0.1:"+server.getAddress().getPort();
+        var defaults=new ExternalModulesClient(tokens,base,base,base);
+        body.set("{\"status\":\"REJECTED\",\"tripId\":null}");
+        defaults.respondToOffer(UUID.randomUUID(),UUID.randomUUID(),"REJECTED");
+        verify(tokens).token("m5:offers:respond");
+        body.set(m6Trip(UUID.randomUUID(),"PENDING_ARRIVAL","null"));
+        defaults.findTrip("trip-42");
+        verify(tokens).token("");
     }
     @Test void startsAndRequestsTripCompletionThroughM6() {
         UUID driver=UUID.randomUUID();

@@ -1,7 +1,6 @@
 # Documentación y consignas locales del alumno
 tpi_hu_arquitectura/
-/docs/docs_astra/
-
+docs/docs_astra
 # Artefactos de compilación Maven
 target/
 .vscode/

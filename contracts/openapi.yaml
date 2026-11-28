@@ -7,7 +7,7 @@
 openapi: 3.0.3
 info:
   title: M3 — Conductores y Vehículos
-  version: 0.3.0
+  version: 0.4.0
   description: >-
     PROPUESTA para revisión, no contrato aprobado ni implementación desplegada. Base: RF-3.1 a RF-3.7 del TPI 2026.
     Arquitectura Java/Spring Boot y PostgreSQL; web Thymeleaf prevista desde E1. El cambio de stack no modifica las
@@ -20,6 +20,9 @@ info:
     0.3.0 agrega, con las mismas formas del contrato común M3 2.0.0 (igual en 3.0.0), las tres lecturas que M4
     consume al validar candidatos: /api/v1/conductores/{id_conductor}/estado, /ubicacion y /vehiculos/{id_vehiculo}.
     Sus errores son application/problem+json con los miembros adicionales codigo y mensaje del esquema Error común.
+    0.4.0 (T8): las operaciones de integración aceptan, además de su scope, los roles de servicio del realm compartido
+    (x-allowed-service-roles); el aviso HTTP de M6 queda marcado como no usado por M6, que comunica fin y cancelación con
+    eventos y es consultado por M3 en GET /api/v1/trips/{tripId}.
 servers:
   - url: 'http://localhost:3003'
     description: Ejemplo local; reemplazar en el entorno integrador. HTTPS al publicar.
@@ -549,6 +552,7 @@ paths:
       tags: [Integration]
       x-planned-delivery: E1
       x-required-service-scopes: ['m3:eligibility:read']
+      x-allowed-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be]
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
         - name: vehicleId
@@ -585,6 +589,7 @@ paths:
       tags: [Integration]
       x-planned-delivery: E1
       x-required-service-scopes: ['m3:eligibility:read']
+      x-allowed-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be]
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
       requestBody:
@@ -619,6 +624,7 @@ paths:
       tags: [Integration]
       x-planned-delivery: E1
       x-required-service-scopes: ['m3:eligibility:read']
+      x-allowed-service-roles: [SERVICIO, ubicacion-be, solicitud-be, viajes-be]
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}
       requestBody:
@@ -673,10 +679,14 @@ paths:
     post:
       operationId: receiveM5DriverOffer
       summary: Recibir una oferta de viaje ya despachada por M5
-      description: M5 conserva la búsqueda y asignación. M3 sólo presenta la oferta al conductor y recibe su respuesta.
+      description: >-
+        M5 conserva la búsqueda y asignación. M3 sólo presenta la oferta al conductor y recibe su respuesta.
+        Una llamada por oferta (no en lote), como la envía M5 Grupo 04 1.5.0 (OfertaM3). Un reenvío idéntico con el
+        mismo offerId responde 202 sin duplicarla; el mismo offerId con otros datos responde 400.
       tags: [Integration]
       x-planned-delivery: E2
       x-required-service-scopes: ['m5:offers:write']
+      x-allowed-service-roles: [SERVICIO, solicitud-be]
       requestBody:
         required: true
         content:
@@ -709,8 +719,11 @@ paths:
       description: >-
         M6 notifica el destino final del conductor. M3 reemplaza la posición simulada y publica esa ubicación a M4.
         Sólo acepta estado FINALIZADO; el identificador del conductor de M3 es UUID.
+        NO USADO POR M6: el contrato M6 1.0.0/2.0.0 (grupos 05 y 12) no llama a M3; publica TripCompleted y
+        TripCancelled y M3 consulta GET /api/v1/trips/{tripId} para liberar al conductor. Se conserva por compatibilidad.
       tags: [Integration]
       x-planned-delivery: E1
+      deprecated: true
       x-required-service-scopes: ['m6:trip:completed:write']
       parameters:
         - {$ref: '#/components/parameters/CorrelationId'}

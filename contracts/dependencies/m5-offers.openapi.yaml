@@ -1,13 +1,38 @@
 openapi: 3.0.3
 info:
-  title: M5 — Respuesta del conductor a ofertas (Propuesta de Interfaz)
-  version: 0.1.0
-  description: Contrato consumido por M3; requiere acuerdo e implementación de M5.
+  title: M5 — Ofertas y respuesta del conductor (vista de M3 como consumidor)
+  version: 0.2.0
+  description: >-
+    Operación de M5 que consume M3 Grupo 02. Reproduce registrarRespuestaOfertaM3 del contrato de M5 Grupo 04
+    (repositorio FRRe-DS/2026-04-TPI, docs/openapi-a.yml 1.5.0, commit f52f0e2 del 27/11/2026), que adopta las rutas
+    de M3 Grupo 02: M5 entrega cada oferta en POST /api/v1/integration/m5/offers (una por oferta, cuerpo OfertaM3,
+    202), consulta POST /api/v1/integration/drivers/dispatch-info y recibe aquí la respuesta del conductor.
+    Implementación en M3: ExternalModulesClient.respondToOffer.
+  x-fuente-proveedor:
+    repositorio: https://github.com/FRRe-DS/2026-04-TPI
+    archivo: docs/openapi-a.yml
+    version: 1.5.0
+    commit: f52f0e2
+  x-otras-implementaciones:
+    - M5 Grupo 13 (FRRe-DS/2026-13-TPI, Contratos/integracion_m3.yml 0.1.0) es una propuesta sin implementar que consulta GET /conductores/{conductor_id} con otra forma.
+    - El contrato común de M3 (Grupo 15) 2.0.0 usa POST /conductores/{id}/solicitudes y POST /solicitudes/{id}; la 3.0.0 usa POST /solicitudes en lote y la respuesta en M5 (POST /ofertas/{oferta_id}/responder).
+  x-acuerdos-pendientes:
+    - Confirmar con qué M5 se integra M3 Grupo 02 en el entorno conjunto (Grupo 04 o Grupo 13).
+    - M5 Grupo 04 exige el scope m5:offers:respond en el token de M3; ese scope debe existir en el Keycloak del entorno conjunto (M5_TOKEN_SCOPE).
+    - Qué identidad usa M5 para llamar a M3 (scope m5:offers:write o rol de servicio SERVICIO/solicitud-be).
 paths:
   /api/v1/offers/{offerId}/driver-response:
     post:
-      summary: Registrar aceptación o rechazo del conductor
+      operationId: registrarRespuestaOfertaM3
+      summary: Registrar en M5 la aceptación o el rechazo del conductor
+      description: >-
+        M5 busca la oferta por offerId, verifica que driverId sea su destinatario y aplica la asignación única. La
+        Idempotency-Key se repite igual en los reintentos de M3 (UUID derivado de offerId, driverId y decisión).
       x-required-service-scopes: [m5:offers:respond]
+      x-interpretacion-m3:
+        '200': ACCEPTED con tripId → viaje asignado y conductor OCUPADO; REJECTED → oferta cerrada.
+        '404, 409, 410': OfferUnavailableException; la oferta deja de mostrarse como pendiente.
+        '503 y otros': IntegrationUnavailableException; la oferta sigue pendiente y el conductor puede reintentar.
       parameters:
         - name: offerId
           in: path
@@ -28,17 +53,28 @@ paths:
               properties:
                 driverId: {type: string, format: uuid}
                 decision: {type: string, enum: [ACCEPTED, REJECTED]}
+            example:
+              driverId: 4c4157ea-d150-4807-8db5-9eeb52cf9591
+              decision: ACCEPTED
       responses:
         '200':
-          description: Respuesta registrada; en una aceptación contiene el viaje asignado por M5.
+          description: Respuesta registrada; en una aceptación incluye el viaje creado en M6.
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
                 required: [status]
                 properties:
                   status: {type: string, enum: [ACCEPTED, REJECTED]}
                   tripId: {type: string, maxLength: 128, nullable: true}
-        '404': {description: Oferta desconocida o no asignada al conductor.}
-        '409': {description: Oferta ya vencida o respondida.}
-        '503': {description: M5 no disponible temporalmente.}
+              example:
+                status: ACCEPTED
+                tripId: 8de4bc01-577f-498c-9acd-07096ecc6239
+        '400': {description: Cuerpo, identificador o clave de idempotencia inválidos.}
+        '401': {description: Token ausente o inválido.}
+        '403': {description: El token no tiene m5:offers:respond.}
+        '404': {description: Oferta desconocida o no asignada al conductor indicado.}
+        '409': {description: Solicitud ya asignada o sin disponibilidad.}
+        '410': {description: Oferta vencida o cancelada.}
+        '503': {description: M5 confirmó la asignación pero todavía no pudo crear o recuperar el viaje en M6; M3 puede reintentar.}

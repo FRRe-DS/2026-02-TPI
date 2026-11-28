@@ -105,6 +105,17 @@ class ProductionSecurityTest {
         mvc.perform(get(estado).header("Authorization","Bearer "+token("other-module","m3-service","","clientes-be",Instant.now().plusSeconds(300),KEY)))
             .andExpect(status().isForbidden());
     }
+    @Test void m5ServiceIdentityOfTheSharedRealmDeliversOffersAndReadsDispatchInfo() throws Exception {
+        String m5=token("service-account-grupo-04","m3-service","","solicitud-be",Instant.now().plusSeconds(300),KEY);
+        mvc.perform(post("/api/v1/integration/m5/offers").header("Authorization","Bearer "+m5).contentType("application/json").content("{}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/integration/drivers/dispatch-info").header("Authorization","Bearer "+m5)
+                .contentType("application/json").content("{\"conductor_id\":\""+driver+"\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.conductor_id").value(driver.toString()));
+        String m4=token("service-account-grupo-03","m3-service","","ubicacion-be",Instant.now().plusSeconds(300),KEY);
+        mvc.perform(post("/api/v1/integration/m5/offers").header("Authorization","Bearer "+m4).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+    }
     @Test void acceptsM1TopLevelRolesClaim() throws Exception {
         mvc.perform(get(path).header("Authorization","Bearer "+tokenWithM1RolesClaim("owner","DRIVER"))).andExpect(status().isOk());
     }
