@@ -161,7 +161,7 @@ jobs:
           PY
 
       - name: Publicar reporte detallado de tests JUnit
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@db71d41eb79864e25ab0337e395c352e84523afe # v4.3.1
         if: always()
         with:
           report_paths: 'target/surefire-reports/TEST-*.xml'
