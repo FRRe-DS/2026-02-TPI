@@ -2,13 +2,38 @@ name: CI · M3 Conductores y Vehículos
 
 on:
   push:
-    branches: [ "main", "develop", "feature/**" ]
+    branches: [ "main", "develop", "feature/**", "devops/**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
+
+permissions:
+  contents: read
+  checks: write
 
 jobs:
   build-and-test:
+    name: Build, Pruebas y Cobertura (JaCoCo)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: m3_db
+          POSTGRES_USER: m3_user
+          POSTGRES_PASSWORD: m3_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U m3_user -d m3_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      M3_PG_TEST_URL: jdbc:postgresql://localhost:5432/m3_db
+      M3_PG_TEST_USER: m3_user
+      M3_PG_TEST_PASSWORD: m3_password
 
     steps:
       - name: Clonar repositorio
@@ -24,5 +49,135 @@ jobs:
       - name: Dar permisos de ejecución a Maven Wrapper
         run: chmod +x mvnw
 
-      - name: Compilar y ejecutar pruebas automatizadas
-        run: ./mvnw verify -B
+      - name: Compilar, verificar cobertura JaCoCo y ejecutar pruebas
+        run: ./mvnw clean verify -B
+
+      - name: Validar ausencia de pruebas omitidas y publicar resumen (JUnit + JaCoCo)
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+
+          tests = errors = failures = skipped = 0
+          report_files = sorted(glob.glob("target/surefire-reports/TEST-*.xml"))
+          for path in report_files:
+              root = ET.parse(path).getroot()
+              tests += int(root.attrib.get("tests", 0))
+              errors += int(root.attrib.get("errors", 0))
+              failures += int(root.attrib.get("failures", 0))
+              skipped += int(root.attrib.get("skipped", 0))
+
+          def make_bar(pct, length=10):
+              filled = max(0, min(length, int(round((pct / 100.0) * length))))
+              empty = length - filled
+              return f"`[{'█' * filled}{'░' * empty}]` {pct:.1f}%"
+
+          jacoco_path = "target/site/jacoco/jacoco.xml"
+          counters = {}
+          packages = []
+          if os.path.exists(jacoco_path):
+              tree = ET.parse(jacoco_path).getroot()
+              for counter in tree.findall("counter"):
+                  ctype = counter.attrib["type"]
+                  missed = int(counter.attrib["missed"])
+                  covered = int(counter.attrib["covered"])
+                  total = missed + covered
+                  pct = (covered / total * 100) if total else 0.0
+                  counters[ctype] = {"covered": covered, "total": total, "pct": pct}
+
+              for pkg in tree.findall("package"):
+                  pname = pkg.attrib["name"].replace("ar/edu/utn/frre/m3/", "")
+                  pcounters = {c.attrib["type"]: (int(c.attrib["missed"]), int(c.attrib["covered"])) for c in pkg.findall("counter")}
+                  pline = pcounters.get("LINE", (0, 0))
+                  pbranch = pcounters.get("BRANCH", (0, 0))
+                  line_pct = (pline[1] / (pline[0] + pline[1]) * 100) if (pline[0] + pline[1]) > 0 else 100.0
+                  branch_pct = (pbranch[1] / (pbranch[0] + pbranch[1]) * 100) if (pbranch[0] + pbranch[1]) > 0 else 100.0
+                  packages.append((pname, line_pct, branch_pct, pline[1], pline[0] + pline[1]))
+
+          line_pct = counters.get("LINE", {}).get("pct", 0.0)
+          branch_pct = counters.get("BRANCH", {}).get("pct", 0.0)
+          inst_pct = counters.get("INSTRUCTION", {}).get("pct", 0.0)
+
+          qg_status = "PASSED" if (line_pct >= 75.0 and branch_pct >= 50.0 and skipped == 0 and tests > 0) else "FAILED"
+          qg_badge_color = "brightgreen" if qg_status == "PASSED" else "red"
+
+          summary_lines = [
+              "# 🚦 Calidad y Pruebas CI · M3 Conductores y Vehículos",
+              "",
+              f"[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-{qg_status}-{qg_badge_color}?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI) "
+              f"[![Tests](https://img.shields.io/badge/Tests-{tests}%20passed-success?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI) "
+              f"[![Lines](https://img.shields.io/badge/Lines-{line_pct:.1f}%25-brightgreen?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI) "
+              f"[![Branches](https://img.shields.io/badge/Branches-{branch_pct:.1f}%25-yellow?style=for-the-badge)](https://github.com/FRRe-DS/2026-02-TPI)",
+              "",
+              "### 📊 Métricas Principales de Cobertura y Quality Gate",
+              "| Métrica | Progreso Visual | Valor Real | Umbral Mínimo | Estado |",
+              "| :--- | :--- | :---: | :---: | :---: |",
+              f"| **Líneas de Código** | {make_bar(line_pct)} | **{counters.get('LINE',{}).get('covered',0)} / {counters.get('LINE',{}).get('total',0)}** | $\\ge 75\\%$ | {'🟢 Cumplido' if line_pct >= 75.0 else '🔴 No Cumplido'} |",
+              f"| **Ramas Condicionales** | {make_bar(branch_pct)} | **{counters.get('BRANCH',{}).get('covered',0)} / {counters.get('BRANCH',{}).get('total',0)}** | $\\ge 50\\%$ | {'🟢 Cumplido' if branch_pct >= 50.0 else '🔴 No Cumplido'} |",
+              f"| **Instrucciones Bytecode** | {make_bar(inst_pct)} | **{counters.get('INSTRUCTION',{}).get('covered',0)} / {counters.get('INSTRUCTION',{}).get('total',0)}** | N/A | 🟢 Informativo |",
+              f"| **Pruebas Omitidas (Skips)** | `[0 skips]` | **{skipped}** | **0** | {'🟢 Cero Skips' if skipped == 0 else '🔴 Skips Detectados'} |",
+              "",
+              "### 🧪 Resumen de Suite JUnit",
+              f"- **Total de pruebas ejecutadas:** `{tests}`",
+              f"- **Fallos / Errores:** `{failures}` / `{errors}`",
+              "- **Base de datos de integración:** PostgreSQL 16 Alpine (`service container`) activo y verificado.",
+              "",
+          ]
+
+          if packages:
+              summary_lines.extend([
+                  "<details>",
+                  "<summary><b>🔍 Ver Desglose de Cobertura por Paquete (Click para expandir)</b></summary>",
+                  "",
+                  "| Paquete | Cobertura Líneas | Cobertura Ramas | Líneas Cubiertas |",
+                  "| :--- | :--- | :--- | :---: |",
+              ])
+              for p in sorted(packages, key=lambda x: x[0]):
+                  summary_lines.append(f"| `{p[0]}` | {make_bar(p[1])} | {make_bar(p[2])} | {p[3]} / {p[4]} |")
+              summary_lines.extend([
+                  "",
+                  "</details>",
+                  "",
+              ])
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as fh:
+                  fh.write("\n".join(summary_lines) + "\n")
+          print("\n".join(summary_lines))
+
+          if tests == 0:
+              print("::error::No se ejecutó ninguna prueba.", file=sys.stderr)
+              sys.exit(1)
+          if skipped > 0:
+              print(f"::error::Se detectaron {skipped} pruebas omitidas (skipped). No se permiten skips en CI.", file=sys.stderr)
+              sys.exit(1)
+          if failures > 0 or errors > 0:
+              print(f"::error::Fallaron pruebas (failures={failures}, errors={errors}).", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Publicar reporte detallado de tests JUnit
+        uses: mikepenz/action-junit-report@db71d41eb79864e25ab0337e395c352e84523afe # v4.3.1
+        if: always()
+        with:
+          report_paths: 'target/surefire-reports/TEST-*.xml'
+          check_name: 'JUnit Test Report · M3'
+          fail_on_failure: true
+
+      - name: Subir reporte de cobertura JaCoCo como artefacto
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage-report
+          path: target/site/jacoco/
+
+      - name: Subir reportes XML de Surefire como artefacto
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-test-reports
+          path: target/surefire-reports/
